@@ -1,0 +1,8 @@
+tensorflow
+pytest
+requests
+imageio
+opencv-python
+wandb
+tensorflow-addons
+tqdm

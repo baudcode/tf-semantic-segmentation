@@ -68,11 +68,18 @@ class TFReader:
         self.record_dir = record_dir
 
     def get_dataset(self, data_type):
+        """ Returns the read dataset 
+
+        files = ["file{}.tfrecord".format(i) for i in range(5)]
+        files = tf.data.Dataset.from_tensor_slices(files)
+        dataset = files.interleave(lambda x: tf.data.TFRecordDataset(x),
+                                cycle_length=5, block_length=1)
+        """
         record_dir = os.path.join(self.record_dir, data_type)
         files = get_files(record_dir, extensions=['tfrecord'])
         logger.debug("TFReader found these (%d) files: %s" % (len(files), str(files)))
-        tfrecord_dataset = tf.data.TFRecordDataset(files, num_parallel_reads=8)
-        return tfrecord_dataset.map(read_tfrecord)
+        tfrecord_dataset = tf.data.TFRecordDataset(files, compression_type='GZIP', num_parallel_reads=8)
+        return tfrecord_dataset.map(read_tfrecord, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     def num_examples(self, data_type):
         return sum([1 for _ in self.get_dataset(data_type)])
@@ -131,7 +138,7 @@ class TFWriter:
                 gen = ds.get(data_type)()
                 for record_file in record_files:
                     tq.set_postfix(record_file=record_file)
-                    with tf.io.TFRecordWriter(record_file) as writer:
+                    with tf.io.TFRecordWriter(record_file, options='GZIP') as writer:
 
                         for image, labels in gen:
                             # images to bytes

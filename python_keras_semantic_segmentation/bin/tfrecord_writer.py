@@ -9,6 +9,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset', choices=list(datasets_by_name.keys()), required=True)
     parser.add_argument('-c', '--data_dir', required=True)
+    parser.add_argument('-num', '--num_examples_per_record', default=100)
     parser.add_argument('-r', '--record_dir', default=None)
     parser.add_argument('-o', '--overwrite', action='store_true')
     args = parser.parse_args()
@@ -24,7 +25,7 @@ if __name__ == "__main__":
 
     print('wrting records to %s' % record_dir)
     writer = TFWriter(record_dir)
-    writer.write(ds, overwrite=args.overwrite)
+    writer.write(ds, overwrite=args.overwrite, num_examples_per_record=args.num_examples_per_record)
 
     # validate number of examples written
     writer.validate(ds)

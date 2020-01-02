@@ -9,6 +9,7 @@ from . import toy
 from . import mapping_challenge
 from . import ms_coco
 from . import plastic
+from . import cityscapes
 
 from .utils import DataType, get_split, get_split_from_list
 from .dataset import Dataset
@@ -23,6 +24,7 @@ datasets_by_name = {
     "camvid": camvid.CamSeq01,
     "coco2014": ms_coco.Coco2014,
     "coco2017": ms_coco.Coco2017,
+    "cityscapes": cityscapes.Cityscapes,
     "tacobinary": plastic.TacoBinary,
     "tacocategory": plastic.TacoCategory,
     "tacosupercategory": plastic.TacoSuperCategory,

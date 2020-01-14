@@ -1,0 +1,31 @@
+language: python
+sudo: required
+python:
+  - 3.7
+
+before_install:
+  - sudo apt-get install -y libsm6 libxext6 libxrender-dev
+
+install:
+  - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
+
+cache: pip
+script:
+  - python setup.py install
+  - python setup.py clean
+  - python setup.py sdist bdist_wheel
+  - travis_wait coverage run --source tf_semantic_segmentation -m py.test tests --doctest-modules --pep8
+
+after_success:
+  - coverage xml
+  - coverage report -m
+  - codecov
+
+deploy:
+  provider: pypi
+  user: $PYPI_USERNAME
+  password: $PYPI_PASSWORD
+  skip_existing: true
+  on:
+    tags: true

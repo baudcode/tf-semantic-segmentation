@@ -5,10 +5,18 @@ from tf_semantic_segmentation.datasets.utils import DataType
 import os
 import tempfile
 import numpy as np
+import pytest
+import time
 
 
-def test_toy_dataset():
-    ds = datasets.toy.Toy(os.path.join(tempfile.tempdir, 'TOY'))
+@pytest.fixture()
+def ds():
+    """ Returns the dataset fixture """
+    return datasets.shapes.ShapesDS(os.path.join(tempfile.tempdir, 'SHAPES'), num_examples=100)
+
+
+def test_toy_dataset(ds):
+
     gen = ds.get()
     inputs, targets = next(gen())
     assert(len(targets.shape) == 2)
@@ -16,19 +24,17 @@ def test_toy_dataset():
     assert(targets.dtype == np.uint8)
     assert(inputs.dtype == np.uint8)
 
-    assert(ds.num_examples(DataType.TRAIN) > 100)
-    assert(ds.num_examples(DataType.TEST) > 10)
-    assert(ds.num_examples(DataType.VAL) > 10)
+    assert(ds.num_examples(DataType.TRAIN) == 80)
+    assert(ds.num_examples(DataType.TEST) == 10)
+    assert(ds.num_examples(DataType.VAL) == 10)
 
 
-def test_write_and_read_cmp_facade_tfrecord():
-    cache_dir = os.path.join(tempfile.gettempdir(), 'TOY')
-    ds = datasets.toy.Toy(cache_dir)
-    record_dir = os.path.join(tempfile.gettempdir(), 'TOY', 'records')
-    writer = tfrecord.TFWriter(record_dir)
+def write_and_read_records(ds, options):
+    record_dir = os.path.join(tempfile.gettempdir(), str(time.time()), 'records')
+    writer = tfrecord.TFWriter(record_dir, options=options)
     writer.write(ds)
 
-    reader = tfrecord.TFReader(record_dir)
+    reader = tfrecord.TFReader(record_dir, options=options)
     dataset = reader.get_dataset(DataType.TRAIN)
     for image, labels, num_classes in dataset:
         print(image.shape, labels.shape, num_classes)
@@ -41,3 +47,11 @@ def test_write_and_read_cmp_facade_tfrecord():
     assert(reader.num_examples(DataType.TRAIN) == writer.num_written(DataType.TRAIN))
     assert(reader.num_examples(DataType.TEST) == writer.num_written(DataType.TEST))
     assert(reader.num_examples(DataType.VAL) == writer.num_written(DataType.VAL))
+
+
+def test_write_and_read_records_no_compression(ds):
+    write_and_read_records(ds, "")
+
+
+def test_write_and_read_records_gzip_compression(ds):
+    write_and_read_records(ds, "GZIP")

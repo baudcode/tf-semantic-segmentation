@@ -14,6 +14,7 @@ def test_metrics_assert_1_0():
     assert(metrics.iou_score(TEST_BATCH, TEST_BATCH) == 1.0)
     """
     for name, metric in reversed(list(metrics.metrics_by_name.items())):
+        assert(metrics.get_metric_by_name(name) == metric)
         print("metrics: %s" % name)
         if name == 'mae':
             assert(metric(TEST_BATCH, TEST_BATCH).numpy() == 0.0)

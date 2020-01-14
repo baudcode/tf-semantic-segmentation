@@ -11,7 +11,7 @@ models_by_name = {
 
 
 def get_model_by_name(name, args) -> (Model, Model):
-    if name in models_by_name:
+    if name in models_by_name.keys():
         return models_by_name[name](**args)
     else:
         raise Exception("cannot find model %s" % name)

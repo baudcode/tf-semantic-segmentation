@@ -44,7 +44,7 @@ def serialize_example(image, mask, image_shape, num_classes):
 def read_tfrecord(serialized_example):
     feature_description = {
         'image': tf.io.FixedLenFeature((), tf.string),  # tf.float32, image between 0 and 1
-        'labels': tf.io.FixedLenFeature((), tf.string),
+        'mask': tf.io.FixedLenFeature((), tf.string),
         'height': tf.io.FixedLenFeature((), tf.int64),
         'width': tf.io.FixedLenFeature((), tf.int64),
         'depth': tf.io.FixedLenFeature((), tf.int64),
@@ -57,11 +57,11 @@ def read_tfrecord(serialized_example):
     image_shape = [example['height'], example['width'], example['depth']]
     image = tf.reshape(image, image_shape)
 
-    labels = tf.io.parse_tensor(example['labels'], out_type=tf.uint8)
-    labels_shape = [example['height'], example['width']]
-    labels = tf.reshape(labels, labels_shape)
+    mask = tf.io.parse_tensor(example['mask'], out_type=tf.uint8)
+    mask_shape = [example['height'], example['width']]
+    mask = tf.reshape(mask, mask_shape)
 
-    return image, labels, example['num_classes']
+    return image, mask, example['num_classes']
 
 
 class TFReader:

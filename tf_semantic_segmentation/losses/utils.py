@@ -6,6 +6,13 @@ SMOOTH = 1e-5
 # ----------------------------------------------------------------
 
 
+def to2d(y_true, y_pred):
+    s = backend.prod(backend.shape(y_true)[1:])
+    y_true = backend.reshape(y_true, [-1, s])
+    y_pred = backend.reshape(y_pred, [-1, s])
+    return y_true, y_pred
+
+
 def labels2image(y):
     """
     Arguments:

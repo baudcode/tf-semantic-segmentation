@@ -43,4 +43,6 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            pytest -s tests/
+            coverage run --source tf_semantic_segmentation -m py.test tests --doctest-modules --pep8
+            coverage report -m
+            codecov

@@ -79,3 +79,6 @@ wandb/
 vast
 *.csv
 client_secrets.json
+experimental/
+.local/
+.keras/

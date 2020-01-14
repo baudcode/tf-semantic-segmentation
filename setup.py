@@ -7,8 +7,8 @@ import os
 import glob
 import shutil
 
-package_name = "python_keras_semantic_segmentation"
 # See: https://stackoverflow.com/questions/2058802/how-can-i-get-the-version-defined-in-setup-py-setuptools-in-my-package/2073599#2073599
+package_name = "tf_semantic_segmentation"
 
 main_ns = {}
 ver_path = convert_path('%s/version.py' % package_name)
@@ -56,22 +56,26 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name=package_name,
     version=main_ns['__version__'],
-    description='Implementation of various semantic segmentation models in keras',
+    description='Implementation of various semantic segmentation models in tensorflow & keras including popular datasets',
     author='Malte Koch',
     license='MIT',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    keywords=["keras", "", "%s" % package_name],
+    keywords=["keras", "tensorflow", "%s" % package_name, "semantic", "segmentation", "ade20k", "coco", "pascalvoc", "cityscapes"],
     author_email='malte-koch@gmx.net',
     maintainer='Malte Koch',
     maintainer_email='malte-koch@gmx.net',
     cmdclass={"clean": CleanCommand},
     # namespace_packages=[package_name],
-    packages=setuptools.find_packages(exclude=['tests', 'tests.*']),
+    packages=setuptools.find_packages(exclude=['tests', 'tests.*', "experimental", "experimantal/*"]),
     install_requires=requirements,
     entry_points={
         'console_scripts': [
-           #  "convaron-segmentation-train=convaron_models.apps.segmentation.train:main"
+           "tf-semantic-segmentation-train=tf_semantic_segmentation.bin.train:main",
+           "tf-semantic-segmentation-predict=tf_semantic_segmentation.eval.predict:main",
+           "tf-semantic-segmentation-tfrecord-writer=tf_semantic_segmentation.bin.tfrecord_writer:main",
+           "tf-semantic-segmentation-tfrecord-analyser=tf_semantic_segmentation.bin.tfrecord_analyser:main",
+           "tf-semantic-segmentation-tfrecord-download=tf_semantic_segmentation.bin.tfrecord_download:main",
         ],
     },
     ext_modules=[],

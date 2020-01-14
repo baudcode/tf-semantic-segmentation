@@ -1,14 +1,14 @@
-from python_keras_semantic_segmentation import datasets
-from python_keras_semantic_segmentation.datasets import tfrecord
-from python_keras_semantic_segmentation.datasets.utils import DataType
+from tf_semantic_segmentation import datasets
+from tf_semantic_segmentation.datasets import tfrecord
+from tf_semantic_segmentation.datasets.utils import DataType
 
 import os
 import tempfile
 import numpy as np
 
 
-def test_cmp_dataset():
-    ds = datasets.cmp_facade.CMP(os.path.join(tempfile.tempdir, 'CMP'))
+def test_toy_dataset():
+    ds = datasets.toy.Toy(os.path.join(tempfile.tempdir, 'TOY'))
     gen = ds.get()
     inputs, targets = next(gen())
     assert(len(targets.shape) == 2)
@@ -22,9 +22,9 @@ def test_cmp_dataset():
 
 
 def test_write_and_read_cmp_facade_tfrecord():
-    cache_dir = os.path.join(tempfile.gettempdir(), 'CMP')
-    ds = datasets.cmp_facade.CMP(cache_dir)
-    record_dir = os.path.join(tempfile.gettempdir(), 'CMP', 'records')
+    cache_dir = os.path.join(tempfile.gettempdir(), 'TOY')
+    ds = datasets.toy.Toy(cache_dir)
+    record_dir = os.path.join(tempfile.gettempdir(), 'TOY', 'records')
     writer = tfrecord.TFWriter(record_dir)
     writer.write(ds)
 

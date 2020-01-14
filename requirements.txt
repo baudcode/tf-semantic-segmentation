@@ -1,8 +1,14 @@
-tensorflow
+tensorflow-addons
+tensorflow-gpu
 pytest
 requests
 imageio
 opencv-python
 wandb
-tensorflow-addons
 tqdm
+scipy
+xmltodict
+pillow
+pytz
+matplotlib
+streamlit

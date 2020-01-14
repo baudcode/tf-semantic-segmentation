@@ -4,8 +4,8 @@ from .precision import precision
 from .recall import recall
 from .psnr import psnr
 from .ssim import ssim
+from . import kmetrics
 
-from tensorflow.keras import metrics as kmetrics
 
 metrics_by_name = {
     "f1_score": f1_score(),
@@ -18,7 +18,9 @@ metrics_by_name = {
     "mae": kmetrics.mae,
     "binary_accuracy": kmetrics.binary_accuracy,
     "categorical_accuracy": kmetrics.categorical_accuracy,
-    "top_k_categorical_accuracy": kmetrics.top_k_categorical_accuracy
+    "top_5_categorical_accuracy": kmetrics.top_5_categorical_accuracy,
+    "top_3_categorical_accuracy": kmetrics.top_3_categorical_accuracy,
+    "top_1_categorical_accuracy": kmetrics.top_1_categorical_accuracy
 }
 
 

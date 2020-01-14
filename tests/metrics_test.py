@@ -13,9 +13,11 @@ def test_metrics_assert_1_0():
     assert(metrics.recall(TEST_BATCH, TEST_BATCH) == 1.0)
     assert(metrics.iou_score(TEST_BATCH, TEST_BATCH) == 1.0)
     """
-    for name, metric in metrics.metrics_by_name.items():
+    for name, metric in reversed(list(metrics.metrics_by_name.items())):
         print("metrics: %s" % name)
-        if name == "psnr":
-            assert(metric()(TEST_BATCH, TEST_BATCH) > 100)
+        if name == 'mae':
+            assert(metric(TEST_BATCH, TEST_BATCH).numpy() == 0.0)
+        elif name == "psnr":
+            assert(metric(TEST_BATCH, TEST_BATCH).numpy() > 100)
         else:
-            assert(metric()(TEST_BATCH, TEST_BATCH) == 1.0)
+            assert(metric(TEST_BATCH, TEST_BATCH).numpy() == 1.0)

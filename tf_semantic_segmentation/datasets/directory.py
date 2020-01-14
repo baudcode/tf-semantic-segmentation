@@ -19,30 +19,30 @@ class DirectoryDataset(Dataset):
             raise FileNotFoundError("Please provide a file containing the labels. Cannot find file %s" % labels_path)
 
         with open(labels_path, 'r') as reader:
-            labels = reader.readlines(labels_path).replace("\n", '')
-            self.labels = list(map(lambda x: x.strip(), labels))
+            self._labels = list(map(lambda x: x.replace("\n", "").strip(), reader.readlines()))
 
-        if len(self.labels) < 2:
-            raise AttributeError("Please provide more than 1 label, only found %s in file %s" % (str(self.labels), labels_path))
+        print("labels: ", self._labels)
+
+        if len(self._labels) < 2:
+            raise AttributeError("Please provide more than 1 label, only found %s in file %s" % (str(self._labels), labels_path))
 
         masks_dir = os.path.join(directory, 'masks')
         images_dir = os.path.join(directory, 'images')
 
-        if not os.path.exists(masks_dir):
-            raise FileNotFoundError("cannot find directory containing the masks %s" % masks_dir)
-
-        if not os.path.exists(images_dir):
-            raise FileNotFoundError("cannot find directory containing the images %s" % images_dir)
-
-        if os.path.exists(os.path.join(images_dir, 'train')):
+        if os.path.exists(os.path.join(directory, 'train')):
             logger.info("using train, val, test found in directory")
 
             self.split = {}
             for data_type in [DataType.TRAIN, DataType.TEST, DataType.VAL]:
-                d_masks_dir = os.path.join(masks_dir, data_type)
-                masks = get_files(d_masks_dir, extensions=extensions)
+                d_masks_dir = os.path.join(directory, data_type, 'masks')
+                d_images_dir = os.path.join(directory, data_type, 'images')
 
-                d_images_dir = os.path.join(images_dir, data_type)
+                if not os.path.exists(d_masks_dir) or not os.path.exists(d_images_dir):
+                    logger.warning("either %s or %s does not exist, getting 0 examples for data_type %s" % (d_masks_dir, d_images_dir, data_type))
+                    self.split[data_type] = []
+                    continue
+
+                masks = get_files(d_masks_dir, extensions=extensions)
                 images = get_files(d_images_dir, extensions=extensions)
 
                 if len(images) != len(masks):
@@ -50,7 +50,7 @@ class DirectoryDataset(Dataset):
 
                 self.split[data_type] = list(zip(images, masks))
 
-        else:
+        elif os.path.exists(masks_dir) and os.path.exists(images_dir):
             masks = get_files(masks_dir, extensions=extensions)
             if len(masks) == 0:
                 raise Exception("cannot find any images in masks directory %s" % masks_dir)
@@ -64,6 +64,10 @@ class DirectoryDataset(Dataset):
 
             trainset = list(zip(images, masks))
             self.split = get_split(trainset, rand=lambda: rand)
+
+    @property
+    def labels(self):
+        return self._labels
 
     def raw(self):
         return self.split

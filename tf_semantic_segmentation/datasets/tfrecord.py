@@ -26,11 +26,11 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def serialize_example(image, labels, image_shape, num_classes):
+def serialize_example(image, mask, image_shape, num_classes):
 
     feature = {
         'image': _bytes_feature(image),  # image dtype=float32
-        'labels': _bytes_feature(labels),
+        'mask': _bytes_feature(mask),
         'num_classes': _int64_feature(num_classes),
         'height': _int64_feature(image_shape[0]),
         'width': _int64_feature(image_shape[1]),
@@ -66,21 +66,17 @@ def read_tfrecord(serialized_example):
 
 class TFReader:
 
-    def __init__(self, record_dir):
+    def __init__(self, record_dir, options='GZIP'):
         self.record_dir = record_dir
+        self.options = options
 
     def get_dataset(self, data_type):
-        """ Returns the read dataset 
+        """ Returns the read dataset"""
 
-        files = ["file{}.tfrecord".format(i) for i in range(5)]
-        files = tf.data.Dataset.from_tensor_slices(files)
-        dataset = files.interleave(lambda x: tf.data.TFRecordDataset(x),
-                                cycle_length=5, block_length=1)
-        """
         record_dir = os.path.join(self.record_dir, data_type)
         files = get_files(record_dir, extensions=['tfrecord'])
         logger.debug("TFReader found these (%d) files: %s" % (len(files), str(files)))
-        tfrecord_dataset = tf.data.TFRecordDataset(files, compression_type='GZIP', num_parallel_reads=multiprocessing.cpu_count())
+        tfrecord_dataset = tf.data.TFRecordDataset(files, compression_type=self.options, num_parallel_reads=multiprocessing.cpu_count())
         return tfrecord_dataset.map(read_tfrecord, num_parallel_calls=multiprocessing.cpu_count())
 
     def num_examples(self, data_type):
@@ -104,8 +100,9 @@ class TFReader:
 
 class TFWriter:
 
-    def __init__(self, record_dir):
+    def __init__(self, record_dir, options='GZIP'):
         self.record_dir = record_dir
+        self.options = options
         self.record_dirs = {
             DataType.TRAIN: os.path.join(record_dir, DataType.TRAIN),
             DataType.VAL: os.path.join(record_dir, DataType.VAL),
@@ -150,16 +147,19 @@ class TFWriter:
                 gen = ds.get(data_type)()
                 for record_file in record_files:
                     tq.set_postfix(record_file=record_file)
-                    with tf.io.TFRecordWriter(record_file, options='GZIP') as writer:
+                    with tf.io.TFRecordWriter(record_file, options=self.options) as writer:
 
-                        for image, labels in gen:
+                        for image, mask in gen:
+
+                            mask = tf.convert_to_tensor(mask)
+                            image = tf.convert_to_tensor(image)
 
                             # preprocess if necessary (color, size)
                             if preprocess_fn:
-                                image, labels = preprocess_fn(image, labels)
+                                image, mask = preprocess_fn(image, mask)
 
-                            # labels must be uint8
-                            assert(labels.dtype == tf.uint8)
+                            # mask must be uint8
+                            assert(mask.dtype == tf.uint8)
 
                             # image must be float32
                             if image.dtype == tf.uint8:
@@ -167,9 +167,9 @@ class TFWriter:
 
                             # images to bytes
                             image_bytes = tf.io.serialize_tensor(image)
-                            labels_bytes = tf.io.serialize_tensor(labels)
+                            mask_bytes = tf.io.serialize_tensor(mask)
 
-                            example = serialize_example(image_bytes, labels_bytes, image.shape, num_classes)
+                            example = serialize_example(image_bytes, mask_bytes, image.shape, num_classes)
                             writer.write(example)
 
                             # update counters

@@ -11,7 +11,7 @@ jobs:
 
       - run:
           command: |
-            sudo apt-get install libsm6 libxext6 libxrender-dev
+            sudo apt-get install -y libsm6 libxext6 libxrender-dev
 
       # Download and cache dependencies
       - restore_cache:
@@ -25,6 +25,7 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
+            pip install --upgrade pip
             pip install -r requirements.txt
             pip install -r tests/requirements.txt
       - save_cache:

@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Activation
 class Mish(Activation):
 
     def __init__(self, **kwargs):
-        super(Mish, self).__init__(lambda x: x * K.tanh(K.softplus(x)))
+        super(Mish, self).__init__(lambda x: x * K.tanh(K.softplus(x)), **kwargs)
         self.__name__ = "Mish"
 
 
@@ -20,10 +20,11 @@ class ReLU6(Activation):
 class Swish(Activation):
 
     def __init__(self, **kwargs):
-        super(Swish, self).__init__(lambda x: x * K.sigmoid(x))
+        super(Swish, self).__init__(lambda x: x * K.sigmoid(x), **kwargs)
         self.__name__ = "Switch"
 
 
-get_custom_objects().update({'relu6': ReLU6(), 'mish': Mish, 'swish': Swish})
+custom_objects = {'relu6': ReLU6(), 'mish': Mish(), 'swish': Swish()}
+get_custom_objects().update(custom_objects)
 
 __all__ = ['Mish', "ReLU6", "Swish"]

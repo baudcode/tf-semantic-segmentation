@@ -14,6 +14,13 @@ import multiprocessing
 
 def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mode=ColorMode.NONE, overwrite=False, batch_size=4):
 
+    # drop the labels
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(os.path.join(output_dir, 'labels.txt'), 'w') as writer:
+        for label in ds.labels:
+            writer.write(label.strip() + "\n")
+
     def preprocess_fn(image, labels, num_classes):
         image = tf.image.convert_image_dtype(image, tf.float32)
         image, labels = resize_and_change_color(image, labels, size, color_mode, resize_method)
@@ -53,6 +60,7 @@ def main():
     parser.add_argument('-d', '--dataset', choices=list(datasets_by_name.keys()), required=True)
     parser.add_argument('-c', '--data_dir', required=True)
     parser.add_argument('-o', '--output_dir', required=True)
+    parser.add_argument('-bs', '--batch_size', type=int, default=4)
     parser.add_argument('-s', '--size', default=None, type=lambda x: list(map(int, x.split(','))))
     parser.add_argument('-rm', '--resize_method', default='resize_with_pad')
     parser.add_argument('-cm', '--color_mode', default=ColorMode.NONE, type=int)
@@ -64,7 +72,7 @@ def main():
     ds = get_dataset_by_name(args.dataset, cache_dir)
 
     logger.info('wrting dataset to %s' % args.output_dir)
-    export(ds, args.output_dir, args.size, args.resize_method, args.color_mode, args.overwrite)
+    export(ds, args.output_dir, args.size, args.resize_method, args.color_mode, args.overwrite, batch_size=args.batch_size)
 
 
 if __name__ == "__main__":

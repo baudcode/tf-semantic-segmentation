@@ -65,6 +65,7 @@ setuptools.setup(
     author_email='malte-koch@gmx.net',
     maintainer='Malte Koch',
     maintainer_email='malte-koch@gmx.net',
+    url="https://github.com/baudcode/tf-semantic-segmentation",
     cmdclass={"clean": CleanCommand},
     # namespace_packages=[package_name],
     packages=setuptools.find_packages(exclude=['tests', 'tests.*', "experimental", "experimantal/*"]),

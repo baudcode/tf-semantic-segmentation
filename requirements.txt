@@ -1,6 +1,5 @@
 tensorflow-addons
 tensorflow-gpu
-pytest
 requests
 imageio
 opencv-python

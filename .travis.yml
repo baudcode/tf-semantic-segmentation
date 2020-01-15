@@ -7,6 +7,8 @@ before_install:
   - sudo apt-get install -y libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 
 install:
+  - pip install --upgrade pip
+  - pip install --upgrade setuptoolss
   - pip install -r requirements.txt
   - pip install -r tests/requirements.txt
 

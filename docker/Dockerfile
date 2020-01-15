@@ -2,7 +2,7 @@ FROM tensorflow/tensorflow:2.0.0-gpu-py3
 
 ADD requirements.txt requirements.txt
 
-RUN apt-get update && apt-get install -y libsm6 libxext6 libxrender-dev
+RUN apt-get update && apt-get install -y libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 RUN pip install -r requirements.txt
 
 RUN apt-get install -y fish tmux curl htop screen

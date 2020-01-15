@@ -104,6 +104,12 @@ or use simple with this script (will be save with size 128 x 128 (width x height
 tf-semantic-segmentation-tfrecord-writer -d 'toy' -c /hdd/datasets/ -s '128,128'
 ```
 
+## Docker
+
+```shell
+docker build -t tf_semantic_segmentation -f docker/Dockerfile ./
+```
+
 ## Prediction UI
 
 ```

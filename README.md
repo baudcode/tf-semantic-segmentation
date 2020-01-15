@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
+[![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
 
 ## Requirements
 
@@ -42,6 +43,9 @@ print(list(modes.models_by_name.keys()))
 # returns a model without the final activation function
 # because the activation function depends on the loss function
 model = models.get_model_by_name('erfnet', {"input_shape": (128, 128, 3), "num_classes": 5})
+
+# call models directly
+model = models.erfnet(input_shape=(128, 128), num_classes=5)
 ```
 
 ## Datasets
@@ -82,7 +86,7 @@ ds.summary()
 
 ## TFRecords
 
-This library simplicifies the process of creating a tfrecord dataset for faster training.
+#### This library simplicifies the process of creating a tfrecord dataset for faster training.
 
 Write tfrecords:
 

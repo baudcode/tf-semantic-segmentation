@@ -21,8 +21,8 @@ def categorical_crossentropy_loss():
 
 def binary_crossentropy_loss():
     def binary_crossentropy(y_true, y_pred):
-        y_true, y_pred = to1d(y_true), to1d(y_pred)
-        r = BinaryCrossentropy(reduction=Reduction.NONE)(y_true, y_pred)
+        #y_true, y_pred = to1d(y_true), to1d(y_pred)
+        r = K.mean(BinaryCrossentropy(reduction=Reduction.NONE)(y_true, y_pred))
         return tf.cast(r, tf.float32)
 
     return binary_crossentropy

@@ -1,9 +1,12 @@
-# TF Semantic Segmentation [![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
+# TF Semantic Segmentation
+
+[![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
+[![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 
 ## Requirements
 
 ```
-sudo apt-get install libsm6 libxext6 libxrender-dev
+sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 ```
 
 ## Training

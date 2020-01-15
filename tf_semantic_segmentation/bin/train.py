@@ -195,7 +195,8 @@ def train_test_model(args, hparams=None, reporter=None):
             cache_dir = get_cache_dir(args.data_dir, args.dataset)
             ds = get_dataset_by_name(args.dataset, cache_dir)
         else:
-            ds = (args.directory)
+            ds = DirectoryDataset(args.directory)
+            cache_dir = args.directory
 
         assert(ds.num_classes > 0), "The dataset must have at least 1 class"
         logger.info("using dataset %s with %d classes" % (ds.__class__.__name__, ds.num_classes))

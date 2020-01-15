@@ -142,7 +142,7 @@ class TFWriter:
                 self._written[data_type] = TFReader(self.record_dir).num_examples(data_type)
                 continue
 
-            with tqdm.tqdm(total=num_examples) as tq:
+            with tqdm.tqdm(total=num_examples, desc='writing tfrecords') as tq:
                 # iterate through every element in generator
                 gen = ds.get(data_type)()
                 for record_file in record_files:

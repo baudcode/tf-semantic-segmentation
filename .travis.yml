@@ -11,11 +11,13 @@ install:
   - pip install -r tests/requirements.txt
 
 cache: pip
+
 script:
-  - python setup.py install
-  - python setup.py clean
   - python setup.py sdist bdist_wheel
+  - python setup.py clean
+  - python setup.py install
   - travis_wait coverage run --source tf_semantic_segmentation -m py.test tests --doctest-modules --pep8
+  - python setup.py clean
 
 after_success:
   - coverage xml

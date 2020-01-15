@@ -7,7 +7,9 @@ def dice_loss():
         numerator = 2 * tf.reduce_sum(y_true * y_pred)
         denominator = tf.reduce_sum(y_true + y_pred)
 
-        return 1 - (numerator + 1) / (denominator + 1)
+        r = 1 - (numerator + 1) / (denominator + 1)
+        return tf.cast(r, tf.float32)
+
     return dice_loss
 
 
@@ -17,7 +19,8 @@ def tversky_loss(beta=0.7):
         numerator = tf.reduce_sum(y_true * y_pred)
         denominator = y_true * y_pred + beta * (1 - y_true) * y_pred + (1 - beta) * y_true * (1 - y_pred)
 
-        return 1 - (numerator + 1) / (tf.reduce_sum(denominator) + 1)
+        r = 1 - (numerator + 1) / (tf.reduce_sum(denominator) + 1)
+        return tf.cast(r, tf.float32)
 
     return tversky_loss
 

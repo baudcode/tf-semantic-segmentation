@@ -1,12 +1,12 @@
-# TF Semantic Segmentation
+# TF Semantic Segmentation [![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
 
-# Requirements
+## Requirements
 
 ```
 sudo apt-get install libsm6 libxext6 libxrender-dev
 ```
 
-# Training
+## Training
 
 ### Using on the the inbuild datasets (generator)
 
@@ -25,7 +25,7 @@ python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscap
     -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish'
 ```
 
-# Models
+## Models
 
 - Erfnet
 - Unet
@@ -38,10 +38,10 @@ print(list(modes.models_by_name.keys()))
 
 # returns a model without the final activation function
 # because the activation function depends on the loss function
-model = models.get_model_by_name('erfnet')
+model = models.get_model_by_name('erfnet', {"input_shape": (128, 128, 3), "num_classes": 5})
 ```
 
-# Datasets
+## Datasets
 
 - Ade20k
 - Camvid
@@ -77,7 +77,7 @@ print(ds.num_examples(DataType.TRAIN))
 ds.summary()
 ```
 
-# TFRecords
+## TFRecords
 
 This library simplicifies the process of creating a tfrecord dataset for faster training.
 
@@ -97,7 +97,7 @@ or use simple with this script (will be save with size 128 x 128 (width x height
 tf-semantic-segmentation-tfrecord-writer -d 'toy' -c /hdd/datasets/ -s '128,128'
 ```
 
-### Prediction UI
+## Prediction UI
 
 ```
 # install

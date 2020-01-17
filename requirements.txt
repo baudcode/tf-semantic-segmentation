@@ -1,5 +1,5 @@
-tensorflow-gpu==2.0.0
-tensorflow-addons==0.6.0
+tensorflow-gpu==2.1.0
+tensorflow-addons==0.7.0
 requests
 imageio
 opencv-python

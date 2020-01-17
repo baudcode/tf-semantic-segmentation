@@ -33,7 +33,7 @@ class ShapesDS(Dataset):
         os.makedirs(self.masks_dir, exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
 
-        self.trainset = parallize_v3(self.create_example, list(range(self._num_examples)))
+        self.trainset = parallize_v3(self.create_example, list(range(self._num_examples)), desc='creating shapes dataset')
 
     @property
     def labels(self):

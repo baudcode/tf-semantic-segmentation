@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
+[![latest tag](https://img.shields.io/github/v/tag/baudcode/tf-semantic-segmentation)]()
 
 ## Requirements
 

@@ -24,7 +24,7 @@ import ast
 import inspect
 
 
-def get_args():
+def get_args(args=None):
 
     color_modes = [int(cm) for cm in ColorMode]
 
@@ -123,7 +123,7 @@ def get_args():
     parser.add_argument('-es-mode', '--early_stopping_mode', default='min', type=str)
     parser.add_argument('-es-monitor', '--early_stopping_monitor', default='val_loss', type=str)
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
 
     os.makedirs(args.logdir, exist_ok=True)
     if args.project is None:

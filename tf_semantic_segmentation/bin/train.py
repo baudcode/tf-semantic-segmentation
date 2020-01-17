@@ -1,22 +1,22 @@
-from ..models import get_model_by_name, models_by_name
-from ..datasets import get_dataset_by_name, DataType, datasets_by_name, get_cache_dir, google_drive_records_by_tag, \
+from tf_semantic_segmentation.models import get_model_by_name, models_by_name
+from tf_semantic_segmentation.datasets import get_dataset_by_name, DataType, datasets_by_name, get_cache_dir, google_drive_records_by_tag, \
     download_records, DirectoryDataset, TFWriter, TFReader
-from ..datasets.utils import convert2tfdataset
-from ..losses import get_loss_by_name, losses_by_name
-from ..metrics import metrics_by_name, get_metric_by_name
-from ..processing import dataset as preprocessing_ds
-from ..processing import ColorMode
-from ..settings import logger
-from ..optimizers import get_optimizer_by_name, names as optimizer_choices
-from ..utils import get_now_timestamp
+from tf_semantic_segmentation.datasets.utils import convert2tfdataset
+from tf_semantic_segmentation.losses import get_loss_by_name, losses_by_name
+from tf_semantic_segmentation.metrics import metrics_by_name, get_metric_by_name
+from tf_semantic_segmentation.processing import dataset as preprocessing_ds
+from tf_semantic_segmentation.processing import ColorMode
+from tf_semantic_segmentation.settings import logger
+from tf_semantic_segmentation.optimizers import get_optimizer_by_name, names as optimizer_choices
+from tf_semantic_segmentation.utils import get_now_timestamp
+from tf_semantic_segmentation import callbacks as custom_callbacks
 
 
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Activation
 from tensorflow.keras import callbacks as kcallbacks
-from .. import callbacks as custom_callbacks
-import contextlib
+
 import os
 import argparse
 import shutil

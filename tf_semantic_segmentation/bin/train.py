@@ -64,6 +64,8 @@ def get_args():
     parser.add_argument('-log', '--log_level', default='INFO', type=str)
     parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'])
     parser.add_argument('-args', '--model_args', default={}, type=dict_type)
+    parser.add_argument('-tpu', '--tpu_strategy', action='store_true')
+
     # wandb
     parser.add_argument('-p', '--project', default=None, help='project name (logdir name), if None current data will be used')
     parser.add_argument('-wandb', '--enable_wandb', action='store_true')
@@ -176,7 +178,13 @@ def train_test_model(args, hparams=None, reporter=None):
         from ray.tune.integration.keras import TuneReporterCallback
         callbacks.append(TuneReporterCallback(reporter))
 
-    if len(args.gpus) == 0:
+    if args.tpu_strategy:
+        resolver = tf.distribute.cluster_resolver.TPUClusterResolver(tpu='grpc://' + os.environ['COLAB_TPU_ADDR'])
+        tf.config.experimental_connect_to_cluster(resolver)
+        tf.tpu.experimental.initialize_tpu_system(resolver)
+        strategy = tf.distribute.experimental.TPUStrategy(resolver)
+
+    elif len(args.gpus) == 0:
         strategy = tf.distribute.OneDeviceStrategy(device="/cpu:0")
     elif len(args.gpus) == 1:
         strategy = tf.distribute.OneDeviceStrategy(device="/gpu:%d" % args.gpus[0])

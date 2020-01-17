@@ -74,9 +74,9 @@ def get_args(args=None):
     parser.add_argument('-base_weights', '--base_weights', default=None, type=str)
     parser.add_argument('-weights', '--model_weights', default=None, type=str)
     parser.add_argument('-smv', '--saved_model_version', default=0, type=int)
-    parser.add_argument('--no_save_base_model_weights', action="store_false")
-    parser.add_argument('--no_save_model_weights', action="store_false")
-    parser.add_argument('--no_export_saved_model', action="store_false")
+    parser.add_argument('--no_save_base_model_weights', action="store_true")
+    parser.add_argument('--no_save_model_weights', action="store_true")
+    parser.add_argument('--no_export_saved_model', action="store_true")
 
     # data
     parser.add_argument('-data_dir', '--data_dir', default='/hdd/datasets')
@@ -106,19 +106,19 @@ def get_args(args=None):
     parser.add_argument('-raylet-name', '--raylet-name', default=None)
 
     # callbacks
-    parser.add_argument('--no_terminate_on_nan', action='store_false')
+    parser.add_argument('--no_terminate_on_nan', action='store_true')
 
     # model checkpoints
-    parser.add_argument('--no_model_checkpoint', action='store_false')
+    parser.add_argument('--no_model_checkpoint', action='store_true')
     parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str)
-    parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_false')
+    parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true')
 
     # tensorboard
-    parser.add_argument('--no_tensorboard', action='store_false')
+    parser.add_argument('--no_tensorboard', action='store_true')
     parser.add_argument('--uf', '--update_freq', default='batch', type=str, choices=['batch', 'epoch'])
 
     # early stopping
-    parser.add_argument('--no_early_stopping', action='store_false')
+    parser.add_argument('--no_early_stopping', action='store_true')
     parser.add_argument('-es-patience', '--early_stopping_patience', default=20, type=int)
     parser.add_argument('-es-mode', '--early_stopping_mode', default='min', type=str)
     parser.add_argument('-es-monitor', '--early_stopping_monitor', default='val_loss', type=str)

@@ -16,7 +16,7 @@ sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 ### Using on the the inbuild datasets (generator)
 
 ```bash
-python -m python_keras_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
+python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
     -logdir 'logs/taco-binary-test' -o 'ranger' -lr 5e-3 --size 256,256 \
     -l 'binary_crossentropy' -fa 'sigmoid' \
     --train_on_generator
@@ -48,6 +48,56 @@ model = models.get_model_by_name('erfnet', {"input_shape": (128, 128, 3), "num_c
 # call models directly
 model = models.erfnet(input_shape=(128, 128), num_classes=5)
 ```
+
+## Use your own dataset
+
+- Accepted file types are: jpg(jpeg) and png
+
+If you already have a train/test/val split then use the following data structure:
+
+```text
+dataset/
+    labels.txt
+    test/
+        images/
+        masks/
+    train/
+        images/
+        masks/
+    val/
+        images/
+        masks/
+```
+
+or use
+
+```text
+dataset/
+    labels.txt
+    images/
+    masks/
+```
+
+The labels.txt should contain a list of labels separated by newline [/n]. For instance it looks like this:
+
+```text
+background
+car
+pedestrian
+```
+
+- To create a tfrecord using the original image size and color use the script like this:
+
+```shell
+INPUT_DIR = ...
+tf-semantic-segmentation-tfrecord-writer -dir $INPUT_DIR -r $INPUT_DIR/records
+```
+
+There are the following addition arguments:
+
+- -s [--size] '$width,$height' (f.e. "512,512")
+- -rm [--resize_method] ('resize', 'resize_with_pad', 'resize_with_crop_or_pad)
+- cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
 
 ## Datasets
 
@@ -120,7 +170,7 @@ curl https://storage.googleapis.com/tensorflow-serving-apt/tensorflow-serving.re
 sudo apt-get update && apt-get install tensorflow-model-server
 
 # start
-tensorflow_model_server --rest_api_port=8501 --model_base_path=/home/baudcode/Code/python-keras-semantic-segmentation/logs/taco_binary_erfnet_256x256_bs_8_rgb_ranger_lr_5e-3-e100-ce_label_smoothing/saved_model/
+tensorflow_model_server --rest_api_port=8501 --model_base_path=/home/user/logs/taco_binary_erfnet_256x256_bs_8_rgb_ranger_lr_5e-3-e100-ce_label_smoothing/saved_model/
 
 # start
 pip install streamlit

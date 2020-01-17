@@ -115,7 +115,7 @@ def get_args(args=None):
 
     # tensorboard
     parser.add_argument('--no_tensorboard', action='store_true')
-    parser.add_argument('--uf', '--update_freq', default='batch', type=str, choices=['batch', 'epoch'])
+    parser.add_argument('-uf', '--update_freq', default='batch', type=str, choices=['batch', 'epoch'])
 
     # early stopping
     parser.add_argument('--no_early_stopping', action='store_true')

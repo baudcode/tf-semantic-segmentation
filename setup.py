@@ -68,7 +68,8 @@ setuptools.setup(
     url="https://github.com/baudcode/tf-semantic-segmentation",
     cmdclass={"clean": CleanCommand},
     # namespace_packages=[package_name],
-    packages=setuptools.find_packages(exclude=['tests', 'tests.*', "experimental", "experimantal/*"]),
+    packages=setuptools.find_packages(include=package_name + "/*"),
+    # packages=setuptools.find_namespace_packages(exclude=['tests', 'tests.*', "experimental", "experimantal/*"]),
     install_requires=requirements,
     entry_points={
         'console_scripts': [

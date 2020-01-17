@@ -57,7 +57,7 @@ def get_args(args=None):
                         type=any_of(metrics_by_name.keys()),
                         help='choices: %s' % (list(metrics_by_name.keys())))
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float)
-    parser.add_argument('-logdir', '--logdir', default='logs/')
+    parser.add_argument('-logdir', '--logdir', default=None)
     parser.add_argument('-e', '--epochs', default=10, type=int)
     parser.add_argument('-bufsize', '--buffer_size', default=50, type=int)
     parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int)
@@ -67,8 +67,8 @@ def get_args(args=None):
     parser.add_argument('-tpu', '--tpu_strategy', action='store_true')
 
     # wandb
-    parser.add_argument('-p', '--project', default=None, help='project name (logdir name), if None current data will be used')
-    parser.add_argument('-wandb', '--enable_wandb', action='store_true')
+    parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used')
+    parser.add_argument('-wn', '--wandb_name', default=None, help='name of the run, otherwise wandb will create a name for you')
 
     # weights
     parser.add_argument('-base_weights', '--base_weights', default=None, type=str)
@@ -125,10 +125,6 @@ def get_args(args=None):
 
     args = parser.parse_args(args=args)
 
-    os.makedirs(args.logdir, exist_ok=True)
-    if args.project is None:
-        args.project = get_now_timestamp()
-
     # tf.get_logger().setLevel(args.log_level)
     logger.setLevel(args.log_level)
 
@@ -148,6 +144,21 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("setting up callbacks")
     callbacks = []
+
+    # setting up wandb
+    if args.wandb_project:
+        import wandb
+        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name)
+        callbacks.append(wandb.keras.WandbCallback())
+
+        if args.logdir is None:
+            args.logdir = os.path.join("logs", args.wandb_project, "%s-%s" % (get_now_timestamp(), str(wandb_run.id)))
+            logger.info("Using logdir %s, because None was specified" % args.logdir)
+
+    if args.logdir is None:
+        args.logdir = os.path.join("logs", "default", get_now_timestamp())
+
+    os.makedirs(args.logdir, exist_ok=True)
 
     if not args.no_tensorboard:
         callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=False,
@@ -298,11 +309,6 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if args.summary:
         model.summary()
-
-    if args.enable_wandb:
-        import wandb
-        wandb.init(project=args.project)
-        callbacks.append(wandb.keras.WandbCallback())
 
     if args.train_on_generator:
         train_ds = convert2tfdataset(ds, DataType.TRAIN)

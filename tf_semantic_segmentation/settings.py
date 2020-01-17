@@ -14,7 +14,6 @@ def get_logger(name='tf-semantic-segmentation'):
     # this prohibits printing of subprocess call output twice
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(_formatter)
-    print(logger.handlers)
     if len(logger.handlers) == 0:
         logger.addHandler(console_handler)
     return logger

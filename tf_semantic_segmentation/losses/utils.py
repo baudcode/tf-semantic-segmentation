@@ -17,15 +17,15 @@ def to2d(t):
     return t
 
 
-def labels2image(y):
+def onehot2image(y):
     """
     Arguments:
-    - y: Tensor BHWC with C=1 (0.0 to 1.0), C=X (onehot)
+    - y: Tensor BHWC (onehot)
 
-    Scales labels of shape BHWC to BHW1 image of range (0, 1) tf.float32
+    Scales input of shape BHWC to BHW1 image of range (0, 1) tf.float32
     """
     if y.shape[-1] == 1:
-        # assume labels are scaled using sigmoid
+        # assume masks are scaled using sigmoid
         return y
 
     y = backend.argmax(y, axis=-1)

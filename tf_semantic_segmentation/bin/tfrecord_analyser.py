@@ -17,11 +17,11 @@ def main():
 
     reader = tfrecord.TFReader(args.record_dir)
 
-    for image, labels, _ in reader.get_dataset(DataType.TRAIN):
+    for image, mask, _ in reader.get_dataset(DataType.TRAIN):
         print("=" * 20)
-        print("image/labels stats:")
+        print("image/mask stats:")
         print("image: ", image.dtype, "(shape=", image.shape, ",max=", image.numpy().max(), ")")
-        print("labels: ", labels.dtype, "(shape=", labels.shape, ",max=", labels.numpy().max(), ")")
+        print("mask: ", mask.dtype, "(shape=", mask.shape, ",max=", mask.numpy().max(), ")")
         break
 
     print("=" * 20)

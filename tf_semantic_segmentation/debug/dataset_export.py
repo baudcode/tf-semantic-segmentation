@@ -14,18 +14,17 @@ import multiprocessing
 
 def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mode=ColorMode.NONE, overwrite=False, batch_size=4):
 
-    # drop the labels
     os.makedirs(output_dir, exist_ok=True)
 
     with open(os.path.join(output_dir, 'labels.txt'), 'w') as writer:
         for label in ds.labels:
             writer.write(label.strip() + "\n")
 
-    def preprocess_fn(image, labels, num_classes):
+    def preprocess_fn(image, mask, num_classes):
         image = tf.image.convert_image_dtype(image, tf.float32)
-        image, labels = resize_and_change_color(image, labels, size, color_mode, resize_method)
+        image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method)
         image = tf.image.convert_image_dtype(image, tf.uint8)
-        return image, labels
+        return image, mask
 
     for data_type in DataType.get():
         masks_dir = os.path.join(output_dir, data_type, 'masks')

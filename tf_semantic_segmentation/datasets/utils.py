@@ -51,11 +51,11 @@ def get_split_from_list(l, split=0.9):
     return trainset, valset
 
 
-def get_split_from_dirs(images_dir, labels_dir, extensions=['png'], train_split=0.8, val_split=0.5, shuffle=True, rand=lambda: 0.2):
+def get_split_from_dirs(images_dir, masks_dir, extensions=['png'], train_split=0.8, val_split=0.5, shuffle=True, rand=lambda: 0.2):
     images = get_files(images_dir, extensions=extensions)
-    labels = get_files(labels_dir, extensions=extensions)
+    masks = get_files(masks_dir, extensions=extensions)
 
-    trainset = list(zip(images, labels))
+    trainset = list(zip(images, masks))
     return get_split(trainset, train_split=train_split, val_split=val_split, shuffle=shuffle, rand=rand)
 
 
@@ -63,15 +63,15 @@ def image_generator(data, color_map=None):
     import numpy as np
 
     def gen():
-        for image_path, label_path in data:
-            labels = imageio.imread(label_path)[:, :, :3]
-            labels_idx = np.array(labels.shape, np.uint8)
+        for image_path, mask_path in data:
+            mask = imageio.imread(mask_path)[:, :, :3]
+            mask_idx = np.array(mask.shape, np.uint8)
             for color, value in color_map.items():
-                labels_idx[labels == np.asarray(
+                mask_idx[mask == np.asarray(
                     [color.r, color.g, color.b])] = [value, value, value]
-            labels_idx = labels_idx.mean(axis=-1)
-            # print(labels_idx.max(), labels_idx.min())
-            yield imageio.imread(image_path), labels_idx
+
+            mask_idx = mask_idx.mean(axis=-1)
+            yield imageio.imread(image_path), mask_idx
     return gen
 
 
@@ -97,10 +97,10 @@ def convert2tfdataset(dataset, data_type, randomize=True):
 
             yield image, mask, dataset.num_classes, shape
 
-    def map_fn(image, labels, num_classes, shape):
+    def map_fn(image, mask, num_classes, shape):
         image = tf.reshape(image, shape)
-        labels = tf.reshape(labels, (shape[0], shape[1]))
-        return image, labels, num_classes
+        mask = tf.reshape(mask, (shape[0], shape[1]))
+        return image, mask, num_classes
 
     ds = tf.data.Dataset.from_generator(
         gen, (tf.uint8, tf.uint8, tf.int64, tf.int64), ([None, None, None], [None, None], [], [3]))

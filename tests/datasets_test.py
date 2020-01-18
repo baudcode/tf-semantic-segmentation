@@ -36,8 +36,8 @@ def write_and_read_records(ds, options):
 
     reader = tfrecord.TFReader(record_dir, options=options)
     dataset = reader.get_dataset(DataType.TRAIN)
-    for image, labels, num_classes in dataset:
-        print(image.shape, labels.shape, num_classes)
+    for image, mask, num_classes in dataset:
+        print(image.shape, mask.shape, num_classes)
         break
 
     assert(writer.num_written(DataType.TRAIN) == ds.num_examples(DataType.TRAIN))

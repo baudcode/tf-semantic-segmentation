@@ -1,13 +1,13 @@
 from tensorflow.keras import backend as K
 import numpy as np
-from ..losses import labels2image
+from ..losses import onehot2image
 
 
 def psnr(SMOOTH=1e-9):
     def psnr(y_true, y_pred):
         # scale between 0 and 255
-        y_true = labels2image(y_true) * 255.
-        y_pred = labels2image(y_pred) * 255.
+        y_true = onehot2image(y_true) * 255.
+        y_pred = onehot2image(y_pred) * 255.
 
         # mean squared error and scale
         mse = K.mean(K.square(y_pred - y_true)) + SMOOTH

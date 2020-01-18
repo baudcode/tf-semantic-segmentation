@@ -70,8 +70,8 @@ class MappingChallenge(Dataset):
         train_dir = os.path.join(self.cache_dir, 'train')
         val_dir = os.path.join(self.cache_dir, 'val')
 
-        val_masks_dir = os.path.join(val_dir, 'labels')
-        train_masks_dir = os.path.join(train_dir, 'labels')
+        val_masks_dir = os.path.join(val_dir, 'masks')
+        train_masks_dir = os.path.join(train_dir, 'masks')
 
         if not self.already_extracted:
 

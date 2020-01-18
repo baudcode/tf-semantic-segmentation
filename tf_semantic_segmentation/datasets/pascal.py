@@ -187,21 +187,21 @@ class PascalVOC2012(Dataset):
         return objs
 
     def parse_example(self, example):
-        image_path, label_path, xml_path = example
+        image_path, mask_path, xml_path = example
 
         # for the testset the labels path does not exist
-        if not os.path.exists(label_path):
+        if not os.path.exists(mask_path):
             return imageio.imread(image_path), None
 
-        labels = imageio.imread(label_path)[:, :, :3]
-        unique_colors = np.unique(labels.reshape((-1, 3)), axis=0)
-        labels_idx = np.zeros(labels.shape[:2], np.uint8)
+        mask = imageio.imread(mask_path)[:, :, :3]
+        unique_colors = np.unique(mask.reshape((-1, 3)), axis=0)
+        mask_idx = np.zeros(mask.shape[:2], np.uint8)
 
         xml_data = self.parse_xml(xml_path)
         # print('labels: ', set([o['name'] for o in xml_data]))
         for obj in xml_data:
 
-            crop = labels[
+            crop = mask[
                 obj['bbox'][1]:obj['bbox'][3],
                 obj['bbox'][0]:obj['bbox'][2],
                 :
@@ -216,19 +216,19 @@ class PascalVOC2012(Dataset):
 
             label_color = sorted_colors[-1][1]
 
-            idxs = np.where(np.all(labels == label_color, axis=-1))
+            idxs = np.where(np.all(mask == label_color, axis=-1))
             class_idx = self.labels.index(obj['name'])
-            labels_idx[idxs] = class_idx
+            mask_idx[idxs] = class_idx
 
-        return imageio.imread(image_path), labels_idx
+        return imageio.imread(image_path), mask_idx
 
     def get(self, data_type=DataType.TRAIN):
 
         data = self.raw()[data_type]
 
         def gen():
-            for image_path, label_path, xml_path in data:
-                yield self.parse_example((image_path, label_path, xml_path))
+            for image_path, mask_path, xml_path in data:
+                yield self.parse_example((image_path, mask_path, xml_path))
 
         return gen
 

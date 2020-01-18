@@ -45,9 +45,9 @@ def main():
 
         record_dir = args.record_dir
 
-    def preprocess_fn(image, labels):
+    def preprocess_fn(image, mask):
         image = tf.image.convert_image_dtype(image, tf.float32)
-        return resize_and_change_color(image, labels, args.size, args.color_mode, args.resize_method)
+        return resize_and_change_color(image, mask, args.size, args.color_mode, args.resize_method)
 
     logger.info('wrting records to %s' % record_dir)
     writer = TFWriter(record_dir)

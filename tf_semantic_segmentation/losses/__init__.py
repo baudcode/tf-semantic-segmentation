@@ -1,5 +1,5 @@
 from tensorflow.keras import backend as K
-from .utils import gather_channels, get_reduce_axes, round_if_needed, SMOOTH, average, labels2image, expand_binary
+from .utils import gather_channels, get_reduce_axes, round_if_needed, SMOOTH, average, onehot2image, expand_binary
 from .focal import binary_focal_loss, categorical_focal_loss
 from .ssim import ssim_loss
 from .ce import ce_label_smoothing_loss, categorical_crossentropy_loss, binary_crossentropy_loss

@@ -58,7 +58,7 @@ class Taco(Dataset):
     def raw(self):
 
         data_dir = os.path.join(self.cache_dir, 'dataset')
-        labels_dir = os.path.join(self.cache_dir, 'labels', self.mode)
+        masks_dir = os.path.join(self.cache_dir, 'masks', self.mode)
         self.download_files(self.annotations_file, data_dir)
 
         anns = self.ann_reader.read_annotations()
@@ -66,7 +66,7 @@ class Taco(Dataset):
         output_paths = []
         input_paths = get_files(data_dir, extensions=['jpg'])
         for image_path in tqdm.tqdm(input_paths):
-            output_paths.append(self.ann_reader.generate_labels(image_path, anns, labels_dir, data_dir=data_dir, mode=self.mode))
+            output_paths.append(self.ann_reader.generate_labels(image_path, anns, masks_dir, data_dir=data_dir, mode=self.mode))
 
         trainset = list(zip(input_paths, output_paths))
         assert(len(trainset) != 0)

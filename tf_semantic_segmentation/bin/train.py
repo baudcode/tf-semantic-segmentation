@@ -92,7 +92,7 @@ def get_args(args=None):
 
     # model
     parser.add_argument("-fa", '--final_activation', default='softmax', type=str, choices=['softmax', 'sigmoid'])
-    parser.add_argument("-a", '--activation', default='relu', choices=['relu', 'relu6', 'mish', 'swich'])
+    parser.add_argument("-a", '--activation', default='relu', choices=['relu', 'relu6', 'mish', 'swish'])
     parser.add_argument('-sum', '--summary', action='store_true')
 
     # ray tune
@@ -251,8 +251,8 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("input shape: %s" % str(input_shape))
 
-    # set scale labels based on sigmoid activation
-    scale_labels = args.final_activation == 'sigmoid'
+    # set scale mask based on sigmoid activation
+    scale_mask = args.final_activation == 'sigmoid'
 
     if num_classes != 2 and args.final_activation == 'sigmoid':
         logger.error('do not choose sigmoid as the final activation when the dataset has more than 2 classes')
@@ -321,14 +321,14 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("building input pipeline")
     # train preprocessing
-    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_labels=scale_labels, is_training=True)
+    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=True)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, args.batch_size, methods=args.augmentations)
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
-    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_labels=scale_labels, is_training=False)
+    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=False)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 

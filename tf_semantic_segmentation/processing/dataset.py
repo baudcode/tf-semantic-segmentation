@@ -37,7 +37,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_labels=False, is_training=True):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, is_training=True):
 
     def map_fn(image, mask, num_classes):
 
@@ -47,7 +47,7 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_labels=False, is_tr
         # resize method for image create float32 image anyway
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method)
 
-        if scale_labels:
+        if scale_mask:
             num_classes = tf.cast(num_classes, tf.float32)
             mask = tf.cast(mask, tf.float32)
             mask = mask / (num_classes - 1.0)
@@ -169,33 +169,33 @@ def get_augment_fn(size, batch_size, methods=['rot180', 'flip_lr', 'flip_ud', 'c
         if method not in augmentation_methods:
             raise Exception("cannot find augmentation method %s, please choose one of %s" % (method, str(augmentation_methods)))
 
-    def augment(images, labels):
+    def augment(images, masks):
 
         # random rotation
         if 'rot180' in methods:
-            rot180 = random_rot180(images=images, labels=labels)
-            images, labels = rot180['images'], rot180['labels']
+            rot180 = random_rot180(images=images, masks=masks)
+            images, masks = rot180['images'], rot180['masks']
 
         # random flipping
         if 'flip_lr' in methods:
-            flip = random_flip_lr(images=images, labels=labels)
-            images, labels = flip['images'], flip['labels']
+            flip = random_flip_lr(images=images, masks=masks)
+            images, masks = flip['images'], flip['masks']
 
         if 'flip_ud' in methods:
-            flip = random_flip_ud(images=images, labels=labels)
-            images, labels = flip['images'], flip['labels']
+            flip = random_flip_ud(images=images, masks=masks)
+            images, masks = flip['images'], flip['masks']
 
         # random zoom
         if 'zoom' in methods:
-            zoom = random_zoom(size, batch_size, images=images, labels=labels)
-            images, labels = zoom['images'], zoom['labels']
+            zoom = random_zoom(size, batch_size, images=images, masks=masks)
+            images, masks = zoom['images'], zoom['masks']
 
         if 'color' in methods:
             images = random_color(images=images)['images']
             # clip images
 
         images = tf.clip_by_value(images, 0, 1)
-        return (images, labels)
+        return (images, masks)
 
     return augment
 
@@ -206,24 +206,22 @@ if __name__ == "__main__":
 
     width, height = 512, 512
     image = get_random_image(width=width, height=height, grayscale=False)
-    label = get_random_image(width=width, height=height, grayscale=True)
+    mask = get_random_image(width=width, height=height, grayscale=True)
 
     images = tf.expand_dims(tf.image.convert_image_dtype(image, tf.float32), axis=0)
-    labels = tf.expand_dims(tf.expand_dims(label, axis=0), axis=-1)
+    masks = tf.expand_dims(tf.expand_dims(mask, axis=0), axis=-1)
 
     print("images shape, dtype ", images.shape, images.dtype)
-    print("labels shape, dtype ", labels.shape, labels.dtype)
+    print("masks shape, dtype ", masks.shape, masks.dtype)
 
     fn = get_augment_fn((width, height), 1, methods=['rot180', 'flip_lr', 'flip_ud', 'color'])
 
     for i in range(5):
         _images = tf.identity(images)
-        _labels = tf.identity(labels)
-        aimages, alabels = fn(_images, _labels)
+        _masks = tf.identity(masks)
+        aimages, amasks = fn(_images, _masks)
 
         print("images shape, dtype ", aimages.shape, aimages.dtype)
-        print("labels shape, dtype ", alabels.shape, alabels.dtype)
-        # assert(aimages.shape == images.shape), '%s does not match %s' % (str(aimages.shape), str(images.shape))
-        # assert(alabels.shape == labels.shape)
+        print("masks shape, dtype ", amasks.shape, amasks.dtype)
 
-        show.show_images([label, image, alabels[0].numpy(), aimages[0].numpy()], cols=2, titles=['label', 'image', 'augmented label', 'augmented image'])
+        show.show_images([mask, image, amasks[0].numpy(), aimages[0].numpy()], cols=2, titles=['mask', 'image', 'augmented mask', 'augmented image'])

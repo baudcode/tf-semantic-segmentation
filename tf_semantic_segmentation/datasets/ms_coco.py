@@ -51,7 +51,7 @@ class CocoAnnotationReader:
     def read_categories(self):
         return json.load(open(self.json_path, 'r'))['categories']
 
-    def generate_labels(self, image_path, anns, output_dir, data_dir=None, mode='category'):
+    def generate_masks(self, image_path, anns, output_dir, data_dir=None, mode='category'):
         if data_dir:
             filename = os.path.relpath(image_path, data_dir)
         else:
@@ -61,7 +61,7 @@ class CocoAnnotationReader:
 
         if not os.path.exists(output_path):
             info = anns[filename]
-            labels = np.zeros((info['height'], info['width']), dtype=np.uint8)
+            mask = np.zeros((info['height'], info['width']), dtype=np.uint8)
 
             for seg in info['segmentations']:
                 category = seg['category_id']
@@ -78,17 +78,17 @@ class CocoAnnotationReader:
                 for s in seg['segmentation']:
                     try:
                         cnt = np.asarray(s, dtype=np.int32).reshape((-1, 2))
-                        cv2.drawContours(labels, [cnt], 0, mask_idx, thickness=cv2.FILLED)
+                        cv2.drawContours(mask, [cnt], 0, mask_idx, thickness=cv2.FILLED)
                     except:
                         pass
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            imageio.imwrite(output_path, labels)
+            imageio.imwrite(output_path, mask)
 
         return output_path
 
 
 def helper(reader, path, anns, output_dir, mode):
-    return reader.generate_labels(path, anns, output_dir, mode=mode)
+    return reader.generate_masks(path, anns, output_dir, mode=mode)
 
 
 class Coco(Dataset):
@@ -125,7 +125,15 @@ class Coco(Dataset):
         super(Coco, self).__init__(cache_dir)
         self.year = year
         self.mode = mode
+        self.reader = None
         assert(self.year == 2014 or self.year == 2017), "year must be either 2014 or 2017"
+
+    @property
+    def labels(self):
+        if self.reader is None:
+            raise Exception("please run raw() method first before getting the labels from the dataset")
+        else:
+            return self.reader.get_labels(mode=self.mode)
 
     def raw(self):
 
@@ -145,25 +153,27 @@ class Coco(Dataset):
         annotations_dir = down(data_urls['annotations'])
 
         anns_train_reader = CocoAnnotationReader(os.path.join(annotations_dir, 'annotations', 'instances_train%d.json' % self.year))
+        self.reader = anns_train_reader
         anns_train = anns_train_reader.read_annotations()
 
         anns_val_reader = CocoAnnotationReader(os.path.join(annotations_dir, 'annotations', 'instances_val%d.json' % self.year))
         anns_val = anns_val_reader.read_annotations()
 
-        train_labels_output_dir = os.path.join(train_dir, 'labels', self.mode)
-        os.makedirs(train_labels_output_dir, exist_ok=True)
+        train_masks_output_dir = os.path.join(train_dir, 'masks', self.mode)
+        os.makedirs(train_masks_output_dir, exist_ok=True)
 
-        args = [(anns_train_reader, path, anns_train, train_labels_output_dir, self.mode, ) for path in train_images]
-        train_labels = parallize_v2(helper, args, desc='generating train labels')
+        args = [(anns_train_reader, path, anns_train, train_masks_output_dir, self.mode, ) for path in train_images]
+        train_masks = parallize_v2(helper, args, desc='generating train masks')
 
-        val_labels_output_dir = os.path.join(val_dir, 'labels')
-        os.makedirs(val_labels_output_dir, exist_ok=True)
+        val_masks_output_dir = os.path.join(val_dir, 'masks')
+        os.makedirs(val_masks_output_dir, exist_ok=True)
 
-        val_labels = [anns_val_reader.generate_labels(path, anns_val, val_labels_output_dir, mode=self.mode) for path in tqdm.tqdm(val_images)]
+        args = [(anns_val_reader, path, anns_val, val_masks_output_dir, self.mode, ) for path in val_images]
+        val_masks = parallize_v2(helper, args, desc='generating val masks')
 
         return {
-            DataType.TRAIN: list(zip(train_images, train_labels)),
-            DataType.VAL: list(zip(val_images, val_labels)),
+            DataType.TRAIN: list(zip(train_images, train_masks)),
+            DataType.VAL: list(zip(val_images, val_masks)),
             DataType.TEST: list(zip(test_images, [None] * len(test_images)))
         }
 

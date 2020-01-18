@@ -24,7 +24,7 @@ class ShapesDS(Dataset):
         super(ShapesDS, self).__init__(cache_dir)
         self._num_examples = num_examples
         self.images_dir = os.path.join(self.cache_dir, 'images')
-        self.masks_dir = os.path.join(self.cache_dir, 'labels')
+        self.masks_dir = os.path.join(self.cache_dir, 'masks')
         self.max_shapes_per_example = max_shapes_per_example
         self.overwrite = overwrite
         self.color_mode = color_mode
@@ -57,7 +57,7 @@ class ShapesDS(Dataset):
             return (random.randint(0, 255))
 
     def draw_shapes(self, image, shapes):
-        labels = np.zeros((self.size[1], self.size[0]), np.uint8)
+        mask = np.zeros((self.size[1], self.size[0]), np.uint8)
         for shape in shapes:
             color = self.get_random_color()
             qx = self.size[0] // 4
@@ -67,8 +67,8 @@ class ShapesDS(Dataset):
             w = random.randint(0, self.size[0] // 2)
             h = random.randint(0, self.size[1] // 2)
             image = self.draw_shape(image, shape, x, y, w, h, color)
-            labels = self.draw_shape(labels, shape, x, y, w, h, self.SHAPES.index(shape))
-        return image, labels
+            mask = self.draw_shape(mask, shape, x, y, w, h, self.SHAPES.index(shape))
+        return image, mask
 
     def create_example(self, i):
         mask_path = os.path.join(self.masks_dir, "%d.png" % i)
@@ -102,6 +102,6 @@ class ShapesDS(Dataset):
 if __name__ == "__main__":
 
     ds = ShapesDS('/hdd/dataset/toy', 1000)
-    for image_path, label_path in ds.raw()[DataType.TRAIN]:
-        show.show_images([imageio.imread(image_path), imageio.imread(label_path).astype(np.float32)])
+    for image_path, mask_path in ds.raw()[DataType.TRAIN]:
+        show.show_images([imageio.imread(image_path), imageio.imread(mask_path).astype(np.float32)])
         break

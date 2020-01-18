@@ -146,7 +146,7 @@ if __name__ == "__main__":
     ds = Cityscapes('/hdd/datasets/cityscapes')
     ds.summary()
 
-    for image, labels in ds.get()():
-        print(image.shape, labels.shape)
-        show.show_images([image, labels.astype(np.float32)])
+    for image, mask in ds.get()():
+        print(image.shape, mask.shape)
+        show.show_images([image, mask.astype(np.float32)])
         break

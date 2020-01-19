@@ -132,8 +132,11 @@ def get_args(args=None):
 
 
 def setup_devices():
-    for gpu in tf.config.experimental.list_physical_devices("GPU"):
-        tf.config.experimental.set_memory_growth(gpu, True)
+    try:
+        for gpu in tf.config.experimental.list_physical_devices("GPU"):
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as re:
+        logger.warning("%s" % str(re))
 
 
 def train_test_model(args, hparams=None, reporter=None):

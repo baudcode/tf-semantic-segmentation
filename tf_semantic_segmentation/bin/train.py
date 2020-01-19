@@ -364,15 +364,14 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("exporting saved model to %s" % saved_model_path)
         model.save(saved_model_path, save_format='tf')
 
-    return results
+    return results, model
 
 
 def main():
     args = get_args()
-    print(train_test_model(args))
+    results, _ = train_test_model(args)
+    print("results: ", results)
 
 
 if __name__ == "__main__":
-    args = get_args()
-    results = train_test_model(args)
-    print(results)
+    main()

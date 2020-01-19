@@ -30,6 +30,32 @@ python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscap
     -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish'
 ```
 
+## Using Code
+
+```python
+from tf_semantic_segmentation.bin.train import train_test_model, get_args
+
+# get the default args
+args = get_args({})
+
+# change some parameters
+# !rm -r logs/
+args.model = 'erfnet'
+# args['color_mode'] = 0
+args.batch_size = 8
+args.size = [128, 128] # resize input dataset to this size
+args.epochs = 10
+args.learning_rate = 1e-4
+args.optimizer = 'adam' # ['adam', 'radam', 'ranger']
+args.loss = 'dice'
+args.logdir = 'logs'
+args.record_dir = "datasets/shapes/records"
+args.final_activation = 'softmax'
+
+# train and test
+results, model = train_test_model(args)
+```
+
 ## Models
 
 - Erfnet

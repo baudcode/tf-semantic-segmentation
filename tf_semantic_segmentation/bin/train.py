@@ -61,6 +61,7 @@ def get_args(args=None):
     parser.add_argument('-e', '--epochs', default=10, type=int)
     parser.add_argument('-bufsize', '--buffer_size', default=50, type=int)
     parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int)
+    parser.add_argument('-valfreq', '--validation_freq', default=1, type=int)
     parser.add_argument('-log', '--log_level', default='INFO', type=str)
     parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'])
     parser.add_argument('-args', '--model_args', default={}, type=dict_type)
@@ -371,7 +372,7 @@ def train_test_model(args, hparams=None, reporter=None):
         validation_steps = reader.num_examples(DataType.VAL) // global_batch_size
 
     model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
-              callbacks=callbacks, epochs=args.epochs)
+              callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 
     results = model.evaluate(val_ds, steps=validation_steps)
 

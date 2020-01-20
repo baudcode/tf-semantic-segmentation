@@ -67,7 +67,7 @@ class ShapesDS(Dataset):
             w = random.randint(0, self.size[0] // 2)
             h = random.randint(0, self.size[1] // 2)
             image = self.draw_shape(image, shape, x, y, w, h, color)
-            mask = self.draw_shape(mask, shape, x, y, w, h, self.SHAPES.index(shape))
+            mask = self.draw_shape(mask, shape, x, y, w, h, self.SHAPES.index(shape) + 1)
         return image, mask
 
     def create_example(self, i):
@@ -101,7 +101,6 @@ class ShapesDS(Dataset):
 
 if __name__ == "__main__":
 
-    ds = ShapesDS('/hdd/dataset/toy', 1000)
+    ds = ShapesDS('/hdd/datasets/shapes', 1000)
     for image_path, mask_path in ds.raw()[DataType.TRAIN]:
         show.show_images([imageio.imread(image_path), imageio.imread(mask_path).astype(np.float32)])
-        break

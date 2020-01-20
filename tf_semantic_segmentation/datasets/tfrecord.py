@@ -134,7 +134,7 @@ class TFWriter:
 
             # calculate the number of record files
             num_record_files = int(num_examples / (num_examples_per_record - 1)) + 1
-            record_files = [os.path.join(record_dir, 'data-%d.tfrecord' % i) for i in range(num_record_files)]
+            record_files = [os.path.join(record_dir, 'data-%08d.tfrecord' % i) for i in range(num_record_files)]
 
             # check if all files exists (abort writing)
             if not overwrite and all(map(lambda x: os.path.exists(x), record_files)):

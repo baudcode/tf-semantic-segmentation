@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     ds.summary()
 
-    colors = masks.random_colors(ds.num_classes)
+    colors = masks.get_colors(ds.num_classes)
     print("using colors: %s" % str(colors))
 
     for image, target in ds.get(DataType.TRAIN)():

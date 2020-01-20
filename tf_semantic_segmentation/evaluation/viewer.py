@@ -58,7 +58,7 @@ mask = np.concatenate(masks, axis=1)
 prediction_masks = [np.argmax(p, axis=-1).astype(np.float32) for p in prediction_onehot]
 prediction = np.concatenate(prediction_masks, axis=1)
 N = 2
-predictions_on_image = [masks_utils.overlay_classes((images[k] * 255.).astype(np.uint8), np.argmax(p, axis=-1), masks_utils.random_colors(N), N)
+predictions_on_image = [masks_utils.overlay_classes((images[k] * 255.).astype(np.uint8), np.argmax(p, axis=-1), masks_utils.get_colors(N), N)
                         for k, p in enumerate(prediction_onehot)]
 prediction_on_image = np.concatenate(predictions_on_image, axis=1)
 

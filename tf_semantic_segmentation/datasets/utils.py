@@ -11,8 +11,9 @@ Color = collections.namedtuple('Color', ['r', 'g', 'b'])
 
 # save google drive records here for now
 google_drive_records_by_tag = {
-    'pascal-512x512-rgb-crop-and-pad': "1gtmElm8jOWqdFDt_StZXYudJOwFYQKyU",
-    'tacobinary-512x512-resize': "1ziK05B29YjTpx6UuawHQ_oantvMoiqPi"
+    'camvid': "https://drive.google.com/file/d/12ma5YOdoCc0K-cY3meYMEU9sxgT25eeT/view?usp=sharing",
+    'cityscapes-512x256': "https://drive.google.com/file/d/1VLzs6ttsFl7XRO6MF7b84F8-sqFeSDEr/view?usp=sharing",
+    'shapes-10k-256x256-resize': 'https://drive.google.com/file/d/1LI06-7UmauMleY5LI2Pdo6_tOwBiVMMa/view?usp=sharing'
 }
 
 
@@ -111,10 +112,11 @@ def convert2tfdataset(dataset, data_type, randomize=True):
     return ds
 
 
-def download_records(tag, destitnation_dir):
+def download_records(tag, destination_dir):
     if tag in google_drive_records_by_tag:
-        drive_id = google_drive_records_by_tag[tag]
-        print("download and extract ", drive_id, tag, destitnation_dir)
-        download_and_extract(('%s.zip' % tag, drive_id), destitnation_dir, chk_exists=False)
+        drive_url = google_drive_records_by_tag[tag]
+        drive_id = drive_url.split("/")[-2]
+        print("download and extract ", drive_id, tag, destination_dir)
+        download_and_extract(('%s.zip' % tag, drive_id), destination_dir, chk_exists=False)
     else:
         raise Exception("cannot download records of tag %s, please use one of %s" % (tag, str(google_drive_records_by_tag.keys())))

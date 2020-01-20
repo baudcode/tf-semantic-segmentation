@@ -1,3 +1,6 @@
+""" Code taken from https://github.com/atriumlts/subpixel/blob/a2d9e9a163db9e3268df1b7109672eea814ee356/keras_subpixel.py """
+
+
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Conv2D
 

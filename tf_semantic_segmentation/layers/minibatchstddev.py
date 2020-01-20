@@ -1,3 +1,7 @@
+"""
+Code taken from https://github.com/johnryh/Face_Embedding_GAN/blob/master/network_utility.py
+"""
+
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Layer
 

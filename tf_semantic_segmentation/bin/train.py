@@ -122,8 +122,9 @@ def get_args(args=None):
     parser.add_argument('--no_tensorboard', action='store_true')
     parser.add_argument('--no_tensorboard_images', action='store_true', help='do not show any images in tensorboard/wandb')
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
+    parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
-    parser.add_argument('-uf', '--update_freq', default='batch', type=str, choices=['batch', 'epoch'])
+    parser.add_argument('-tb_uf', '--tensorboard_update_freq', default='batch', type=str, choices=['batch', 'epoch'])
 
     # early stopping
     parser.add_argument('--no_early_stopping', action='store_true')
@@ -174,7 +175,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if not args.no_tensorboard:
         callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=False,
-                                                write_images=False, write_grads=True, update_freq=args.update_freq))
+                                                write_images=False, write_grads=True, update_freq=args.tensorboard_update_freq))
 
     if not args.no_terminate_on_nan:
         callbacks.append(kcallbacks.TerminateOnNaN())
@@ -350,7 +351,9 @@ def train_test_model(args, hparams=None, reporter=None):
         val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
         prediction_callback = custom_callbacks.PredictionCallback(model, args.logdir, val_ds_images,
-                                                                  scaled_mask=scale_mask, binary_threshold=args.binary_threshold)
+                                                                  scaled_mask=scale_mask,
+                                                                  binary_threshold=args.binary_threshold,
+                                                                  update_freq=args.tensorboard_images_freq)
         callbacks.append(prediction_callback)
         prediction_callback.on_epoch_end(-1, {})
 

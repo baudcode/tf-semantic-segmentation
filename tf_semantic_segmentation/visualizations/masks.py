@@ -52,7 +52,6 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
     """
     predictions = predictions.copy()
     colors = get_colors(num_classes)
-    print("got colors: ", colors)
 
     if images is None:
         shape = (predictions.shape[0], predictions.shape[1], predictions.shape[2], 3)
@@ -61,7 +60,6 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
         images = images.copy()
 
         if images.dtype == "float32":
-            print("warning: converting to uint8")
             images = (images * 255).astype(np.uint8)
 
         if images.shape[-1] == 1:

@@ -20,6 +20,9 @@ def get_args():
     parser.add_argument('-i', '--input', help='input file', default=None)
     parser.add_argument('-t', '--target', help='target file', default=None)
     parser.add_argument('-r', '--record_dir', help='record dir', default=None)
+    parser.add_argument('-c', '--color_mode', help='color mode (0=RGB, 1=GRAY, 2=NONE), default: NONE', type=int, default=2)
+    parser.add_argument('-rm', '--resize_method', help='default: resize', type=str, default='resize')
+    parser.add_argument('-sm', '--scale_mask', help='scale mask between 0 and 1', action='store_true')
     return parser.parse_args()
 
 
@@ -35,7 +38,8 @@ def main():
 
     if args.record_dir:
         dataset = TFReader(args.record_dir).get_dataset(DataType.VAL)
-        dataset = dataset.map(pre_dataset.get_preprocess_fn(size))
+        dataset = dataset.map(pre_dataset.get_preprocess_fn(size, args.color_mode, args.resize_method,
+                                                            scale_mask=args.scale_mask, is_training=False))
 
         for image, target in dataset:
             target = np.argmax(target, axis=-1)

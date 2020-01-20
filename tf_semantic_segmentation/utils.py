@@ -11,6 +11,7 @@ import PIL
 import requests
 import tqdm
 import multiprocessing
+import threading
 import io
 import PIL.Image
 import base64
@@ -22,6 +23,53 @@ from .settings import logger
 
 class ExtractException(Exception):
     pass
+
+
+def run(cmd, block=True):
+    logger.debug(cmd)
+    output = b''
+    if not block:
+        p = subprocess.Popen(cmd, shell=True)
+        stdout, stderr = p.communicate()
+    else:
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+
+        stdout, stderr = process.stdout, process.stderr
+
+    if stdout:
+        for line in iter(stdout.readline, ""):
+            line = line.replace(b'\r', b'').replace(b'\n', b'').strip()
+            if line == b"":
+                break
+            output += line + b'\n'
+            logger.debug("%s" % str(line, 'utf-8'))
+    if stderr:
+        for line in iter(stderr.readline, ""):
+            line = line.replace(b'\r', b'').replace(b'\n', b'').strip()
+            if line == b"":
+                break
+            output += line + b'\n'
+            logger.debug("%s" % str(line, 'utf-8'))
+
+    return str(output, encoding='utf-8')
+
+
+def kill_start_tensorboard(logdir, port=6006):
+
+    def target():
+        kill_process_by_port(port)
+        run(['tensorboard', '--logdir=%s' % logdir, '--port=%d' % port])
+
+    t = threading.Thread(target=target)
+    t.start()
+    return t
+
+
+def kill_process_by_port(port, protocol='tcp'):
+    run([
+        'fuser', '-n', protocol, '-k', str(port)
+    ], block=True)
 
 
 def get_image_from_url(url, auth=None):
@@ -326,23 +374,6 @@ def format_datetime(d, mode="postgis"):
         return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
 
-class DownloadQueue:
-
-    def __init__(self):
-        self.files = []
-
-    def add(self, url, local_path):
-        self.files.append((url, os.path.dirname(local_path), os.path.basename(local_path)))
-        return self
-
-    def run(self):
-        n_processes = multiprocessing.cpu_count()
-
-        with multiprocessing.Pool(processes=n_processes) as pool:
-            results = [r for r in tqdm.tqdm(pool.imap(download_file, self.files), desc='downloading', total=len(self.files))]
-        return results
-
-
 def ndarray_to_base64(img):
     pil_img = PIL.Image.fromarray(img)
     buff = io.BytesIO()
@@ -360,3 +391,14 @@ def get_size(path='.'):
                 total_size += os.path.getsize(fp)
 
     return total_size
+
+
+if __name__ == "__main__":
+    import time
+
+    logdir = os.path.abspath('logs/')
+    start_tensorboard(logdir)
+
+    while 1:
+        print("staying alive")
+        time.sleep(1)

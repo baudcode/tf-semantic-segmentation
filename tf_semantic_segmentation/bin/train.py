@@ -8,7 +8,7 @@ from tf_semantic_segmentation.processing import dataset as preprocessing_ds
 from tf_semantic_segmentation.processing import ColorMode
 from tf_semantic_segmentation.settings import logger
 from tf_semantic_segmentation.optimizers import get_optimizer_by_name, names as optimizer_choices
-from tf_semantic_segmentation.utils import get_now_timestamp
+from tf_semantic_segmentation.utils import get_now_timestamp, kill_start_tensorboard
 from tf_semantic_segmentation import callbacks as custom_callbacks
 
 
@@ -113,8 +113,15 @@ def get_args(args=None):
     parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str)
     parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true')
 
+    # auto start tensorboard
+    parser.add_argument('--no_start_tensorboard', action='store_true')
+    parser.add_argument('---tensorboard_port', type=int, default=6006)
+
     # tensorboard
     parser.add_argument('--no_tensorboard', action='store_true')
+    parser.add_argument('--no_tensorboard_images', action='store_true', help='do not show any images in tensorboard/wandb')
+    parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
+    parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
     parser.add_argument('-uf', '--update_freq', default='batch', type=str, choices=['batch', 'epoch'])
 
     # early stopping
@@ -151,7 +158,7 @@ def train_test_model(args, hparams=None, reporter=None):
     # setting up wandb
     if args.wandb_project:
         import wandb
-        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name)
+        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True)
         callbacks.append(wandb.keras.WandbCallback())
 
         if args.logdir is None:
@@ -161,6 +168,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.logdir is None:
         args.logdir = os.path.join("logs", "default", get_now_timestamp())
 
+    logger.info("logdir: %s" % args.logdir)
     os.makedirs(args.logdir, exist_ok=True)
 
     if not args.no_tensorboard:
@@ -251,6 +259,7 @@ def train_test_model(args, hparams=None, reporter=None):
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")
     else:
         input_shape = TFReader(record_dir).input_shape
+        input_shape = (input_shape[0], input_shape[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
     logger.info("input shape: %s" % str(input_shape))
 
@@ -334,6 +343,18 @@ def train_test_model(args, hparams=None, reporter=None):
     val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=False)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
+
+    if not args.no_tensorboard and not args.no_tensorboard_images:
+        val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
+        val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+        prediction_callback = custom_callbacks.PredictionCallback(model, args.logdir, val_ds_images,
+                                                                  scaled_mask=scale_mask, binary_threshold=args.binary_threshold)
+        callbacks.append(prediction_callback)
+        prediction_callback.on_epoch_end(-1, {})
+
+    if not args.no_start_tensorboard:
+        kill_start_tensorboard(args.logdir, port=args.tensorboard_port)
 
     if args.steps_per_epoch != -1:
         steps_per_epoch = args.steps_per_epoch

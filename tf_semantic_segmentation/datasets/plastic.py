@@ -66,7 +66,7 @@ class Taco(Dataset):
         output_paths = []
         input_paths = get_files(data_dir, extensions=['jpg'])
         for image_path in tqdm.tqdm(input_paths):
-            output_paths.append(self.ann_reader.generate_labels(image_path, anns, masks_dir, data_dir=data_dir, mode=self.mode))
+            output_paths.append(self.ann_reader.generate_masks(image_path, anns, masks_dir, data_dir=data_dir, mode=self.mode))
 
         trainset = list(zip(input_paths, output_paths))
         assert(len(trainset) != 0)
@@ -94,8 +94,8 @@ class TacoSuperCategory(Taco):
 
 if __name__ == "__main__":
     import imageio
-    t = Taco('/hdd/datasets/taco', mode='category')
-
-    for image, labels in t.get()():
-        imageio.imwrite("test.png", labels)
-        break
+    t = Taco('/hdd/datasets/taco', mode='supercategory')
+    t.summary()
+    #for image, labels in t.get()():
+    #    imageio.imwrite("test.png", labels)
+    #    break

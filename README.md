@@ -7,8 +7,15 @@
 
 ## Requirements
 
-```
+```shell
 sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
+```
+
+#### Tensorflow & Tensorflow Addons
+
+```shell
+pip install tensorflow-gpu==2.1.0 --upgrade
+pip install tensorflow-addons==0.7.0 --upgrade
 ```
 
 ## Training

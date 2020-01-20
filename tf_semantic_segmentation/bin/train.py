@@ -350,7 +350,7 @@ def train_test_model(args, hparams=None, reporter=None):
         val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
         val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-        prediction_callback = custom_callbacks.PredictionCallback(model, args.logdir, val_ds_images,
+        prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
                                                                   scaled_mask=scale_mask,
                                                                   binary_threshold=args.binary_threshold,
                                                                   update_freq=args.tensorboard_images_freq)

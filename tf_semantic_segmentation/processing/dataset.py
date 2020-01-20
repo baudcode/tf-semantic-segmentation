@@ -61,7 +61,7 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, is_trai
     return map_fn
 
 
-def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, augment_fn=None):
+def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
 
     if num_workers > 1:
         dataset = dataset.shard(num_workers, worker_index)
@@ -80,14 +80,17 @@ def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=
     else:
         dataset = dataset.repeat()
 
-    dataset = dataset.shuffle(buffer_size=buffer_size)
+    if shuffle:
+        dataset = dataset.shuffle(buffer_size=buffer_size)
+
     dataset = dataset.batch(batch_size)
 
     if augment_fn:
         dataset = dataset.map(augment_fn, num_parallel_calls=multiprocessing.cpu_count())
 
     # dataset = dataset.prefetch(buffer_size=buffer_size)
-    dataset = dataset.prefetch(buffer_size // batch_size)
+    if prefetch:
+        dataset = dataset.prefetch(buffer_size // batch_size)
     return dataset
 
 

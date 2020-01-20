@@ -1,3 +1,5 @@
+from ..settings import logger
+
 import imageio
 
 
@@ -15,13 +17,13 @@ class Dataset(object):
         self.cache_dir = cache_dir
 
     def summary(self):
-        print("======================%s========================" % self.__class__.__name__)
-        print("dataset has %d classes" % self.num_classes)
-        print("labels: %s" % self.labels)
+        logger.info("======================%s========================" % self.__class__.__name__)
+        logger.info("dataset has %d classes" % self.num_classes)
+        logger.info("labels: %s" % self.labels)
         examples = [(data_type, self.num_examples(data_type)) for data_type in [DataType.TRAIN, DataType.VAL, DataType.TEST]]
-        print("examples: ", examples)
-        print("total: ", sum([l for _, l in examples]))
-        print("================================================")
+        logger.info("examples: %s" % str(examples))
+        logger.info("total: %d" % sum([l for _, l in examples]))
+        logger.info("================================================")
 
     @property
     def labels(self):
@@ -49,6 +51,8 @@ class Dataset(object):
 
         def gen():
             for image_path, mask_path in data:
-                yield imageio.imread(image_path), imageio.imread(mask_path)
-
+                try:
+                    yield imageio.imread(image_path), imageio.imread(mask_path)
+                except:
+                    logger.error("could not read either %s or %s" % (image_path, mask_path))
         return gen

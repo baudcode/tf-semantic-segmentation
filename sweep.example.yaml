@@ -1,0 +1,29 @@
+program: tf_semantic_segmentation/bin/train.py
+method: random
+metric:
+  name: val_iou_score
+  goal: maximize
+parameters:
+  learning_rate:
+    min: 0.001
+    max: 0.1
+  optimizer:
+    values: ["adam", "radm", "ranger"]
+  activation:
+    values: ["relu", "mish", "swish"]
+  buffer_size:
+    values: [50]
+  loss:
+    values: ["binary_crossentropy"]
+  final_activation:
+    values: ["sigmoid"]
+  epochs:
+    values: [100]
+  batch_size:
+    values: [8, 16]
+  record_dir:
+    values: ["/hdd/datasets/taco/records/tacobinary-256x256-resize"]
+  wandb_project:
+    values: ["tacobinary-256x256-resize"]
+  gpus:
+    values: [""]

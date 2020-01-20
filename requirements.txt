@@ -11,3 +11,4 @@ pillow
 pytz
 matplotlib
 streamlit
+tensorboardX

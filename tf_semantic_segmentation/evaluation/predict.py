@@ -1,5 +1,5 @@
 from tensorflow.keras.models import load_model
-from tensorflow_addons.optimizers import *
+from .. import optimizers
 import argparse
 import imageio
 import numpy as np

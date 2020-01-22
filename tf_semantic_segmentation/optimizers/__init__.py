@@ -4,6 +4,7 @@ from tensorflow.keras import optimizers
 def get_optimizer_by_name(name, lr) -> optimizers.Optimizer:
     if name == 'adam':
         return optimizers.Adam(learning_rate=lr)
+
     elif name == 'radam':
         import tensorflow_addons as tfa
         return tfa.optimizers.RectifiedAdam(learning_rate=lr)

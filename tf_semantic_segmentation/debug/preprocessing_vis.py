@@ -4,7 +4,6 @@ from ..processing import dataset as ds_preprocessing
 from ..processing import ColorMode
 from ..visualizations.show import show_images
 from ..visualizations.masks import draw_segmentation_masks, draw_segmentation_masks_2d
-import matplotlib.pyplot as plt
 import numpy as np
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
-from matplotlib import pyplot as plt
 import numpy as np
+
 
 def show_images(images, cols=1, titles=None, show=True):
     """Display a list of images in a single figure with matplotlib.
@@ -15,6 +15,7 @@ def show_images(images, cols=1, titles=None, show=True):
     titles: List of titles corresponding to each image. Must have
             the same length as titles.
     """
+    from matplotlib import pyplot as plt
     assert((titles is None)or (len(images) == len(titles)))
     n_images = len(images)
     if titles is None:

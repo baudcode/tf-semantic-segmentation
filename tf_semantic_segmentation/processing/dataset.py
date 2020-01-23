@@ -14,25 +14,30 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
 
     if size is not None:
         # make 3dim for tf.image.resize
-        mask = tf.expand_dims(mask, axis=-1)
+        if mask is not None:
+            mask = tf.expand_dims(mask, axis=-1)
 
         # augmentatations
         if resize_method == 'resize':
             image = tf.image.resize(image, size[::-1], antialias=True)
-            mask = tf.image.resize(mask, size[::-1], method='nearest')  # use nearest for no interpolation
+            if mask is not None:
+                mask = tf.image.resize(mask, size[::-1], method='nearest')  # use nearest for no interpolation
 
         elif resize_method == 'resize_with_pad':
             image = tf.image.resize_with_pad(image, size[1], size[0], antialias=True)
-            mask = tf.image.resize_with_pad(mask, size[1], size[0], method='nearest')  # use nearest for no interpolation
+            if mask is not None:
+                mask = tf.image.resize_with_pad(mask, size[1], size[0], method='nearest')  # use nearest for no interpolation
 
         elif resize_method == 'resize_with_crop_or_pad':
             image = tf.image.resize_with_crop_or_pad(image, size[1], size[0])
-            mask = tf.image.resize_with_crop_or_pad(mask, size[1], size[0])  # use nearest for no interpolation
+            if mask is not None:
+                mask = tf.image.resize_with_crop_or_pad(mask, size[1], size[0])  # use nearest for no interpolation
         else:
             raise Exception("unknown resize method %s" % resize_method)
 
         # reduce dim added before
-        mask = tf.squeeze(mask, axis=-1)
+        if mask is not None:
+            mask = tf.squeeze(mask, axis=-1)
 
     return image, mask
 

@@ -1,0 +1,10 @@
+requests
+imageio
+opencv-python
+wandb
+tqdm
+scipy
+xmltodict
+pillow
+pytz
+tensorboardX

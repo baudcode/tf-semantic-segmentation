@@ -1,0 +1,6 @@
+tensorflow-gpu==2.1.0
+tensorflow-addons==0.7.0
+pytest-pep8
+pytest-cov
+coverage
+codecov

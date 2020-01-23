@@ -400,7 +400,7 @@ if __name__ == "__main__":
     import time
 
     logdir = os.path.abspath('logs/')
-    start_tensorboard(logdir)
+    kill_start_tensorboard(logdir)
 
     while 1:
         print("staying alive")

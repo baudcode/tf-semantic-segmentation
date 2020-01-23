@@ -7,6 +7,4 @@ scipy
 xmltodict
 pillow
 pytz
-matplotlib
-streamlit
 tensorboardX

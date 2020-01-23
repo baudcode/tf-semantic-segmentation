@@ -97,14 +97,14 @@ def get_args(args=None):
     parser.add_argument('-sum', '--summary', action='store_true')
 
     # ray tune
-    parser.add_argument('-no-ip-address', '--node-ip-address', default=None)
-    parser.add_argument('-redis-address', '--redis-address', default=None)
-    parser.add_argument('-config-list', '--config-list', default=None)
-    parser.add_argument('-temp-dir', '--temp-dir', default=None)
-    parser.add_argument('--use-pickle', '--use-pickle', action='store_true')
-    parser.add_argument('-node-manager-port', '--node-manager-port', default=None)
-    parser.add_argument('-object-store-name', '--object-store-name', default=None)
-    parser.add_argument('-raylet-name', '--raylet-name', default=None)
+    # parser.add_argument('-no-ip-address', '--node-ip-address', default=None)
+    # parser.add_argument('-redis-address', '--redis-address', default=None)
+    # parser.add_argument('-config-list', '--config-list', default=None)
+    # parser.add_argument('-temp-dir', '--temp-dir', default=None)
+    # parser.add_argument('--use-pickle', '--use-pickle', action='store_true')
+    # parser.add_argument('-node-manager-port', '--node-manager-port', default=None)
+    # parser.add_argument('-object-store-name', '--object-store-name', default=None)
+    # parser.add_argument('-raylet-name', '--raylet-name', default=None)
 
     # callbacks
     parser.add_argument('--no_terminate_on_nan', action='store_true')

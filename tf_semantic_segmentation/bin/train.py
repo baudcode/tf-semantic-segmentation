@@ -115,7 +115,7 @@ def get_args(args=None):
     parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true')
 
     # auto start tensorboard
-    parser.add_argument('--no_start_tensorboard', action='store_true')
+    parser.add_argument('--start_tensorboard', action='store_true')
     parser.add_argument('---tensorboard_port', type=int, default=6006)
 
     # tensorboard
@@ -357,7 +357,7 @@ def train_test_model(args, hparams=None, reporter=None):
         callbacks.append(prediction_callback)
         prediction_callback.on_epoch_end(-1, {})
 
-    if not args.no_start_tensorboard:
+    if args.start_tensorboard:
         kill_start_tensorboard(args.logdir, port=args.tensorboard_port)
 
     if args.steps_per_epoch != -1:

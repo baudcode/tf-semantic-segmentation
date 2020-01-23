@@ -58,7 +58,10 @@ def run(cmd, block=True):
 def kill_start_tensorboard(logdir, port=6006):
 
     def target():
-        kill_process_by_port(port)
+        try:
+            kill_process_by_port(port)
+        except Exception as e:
+            logger.warning("could not kill tensorboard, %s" % str(e))
         run(['tensorboard', '--logdir=%s' % logdir, '--port=%d' % port])
 
     t = threading.Thread(target=target)

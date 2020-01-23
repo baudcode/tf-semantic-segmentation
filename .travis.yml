@@ -23,7 +23,7 @@ after_success:
   - codecov
 deploy:
   provider: pypi
-  user: "baudcode"
+  user: "__token__"
   password:
     secure: Qx0XdKlX//uskH7B+FRQA8iKKN+rC3ona7Os+wiJqY0Vge2r7x4fFODtyfAA9mlvj6UYQ0x56H5k1sOeiJmmHbZTV5sulLurLOi87BpcYT9I10+Zsiw//y2CWjDVrfptGFnGYA/u/Qj6M7pOhSDZGQZ9YxoqasOvIE8t/sn3f4HXq8y/PjqMTaJ5mGYDIytz/A5RjN/R1lnPPrzado1NkJ5nf1nmX1kglCne1dny0xnOTJHdGanwa4p6A8sU6FildN+VskmA+vs8sK7Zr3Zuu9RtyTFEI0u+5pxoZQ4YIjZxp1/Wmd0fDX3vAbsKFAfGdUsYOgNigcmRd1+vOYEBSxnIARR7FG8zi+oEz5qJJFMXXflC0mu5kL9mOzS8eM3GrOvlDHrrqRL+vlOmrLIf7MozCnetyjl3fx0K0SrrgB/blPjUleIHjDlr6+NXnQqdh0xUVRE6Geo+FD8P7Giy1TbUo5xLKKzDF6XOPvggMKhz4OJ3/A6IRNF20ut26Uww8cyrJTEIBj7ia30B+9jLRwM0uU1Sw9BzsPq8dNpBs7scF8c0dlNswXw7q+f8gGeOUO0gzX9HuY+szpW2hJqL7xlixyGOHnzIqdIczS81OXaCWBcoQYEqI97SKf4ZngMUclzZ1AR1i2/manVMiYiC5Q/1NVJEDNWv1dkmLF1DRd0=
   skip_existing: true

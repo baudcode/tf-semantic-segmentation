@@ -24,6 +24,7 @@
 - Hyper Parameter Optimization using WandB
 - WandB Integration
 - Easily create TFRecord from Directory
+- Tensorboard visualizations
 
 - Models:
 

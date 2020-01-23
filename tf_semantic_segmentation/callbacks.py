@@ -28,9 +28,14 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             epoch = epoch + 1
 
         if epoch % self.update_freq == 0:
-            logger.debug("logging images to tensorboard")
+            logger.debug("logging images to tensorboard, epoch=%d" % epoch)
 
-            input_batch, target_batch = next(iter(self.val_generator.as_numpy_iterator()))
+            for input_batch, target_batch in self.val_generator:
+                input_batch = input_batch.numpy()
+                target_batch = target_batch.numpy()
+                break
+
+            # input_batch, target_batch = next(iter(self.val_generator.as_numpy_iterator()))
 
             if self.scaled_mask:
                 target_batch = np.expand_dims(target_batch, axis=-1)

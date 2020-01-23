@@ -5,13 +5,72 @@
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
 [![latest tag](https://img.shields.io/github/v/tag/baudcode/tf-semantic-segmentation)]()
 
+## Features
+
+- Datasets
+
+  - Ade20k
+  - Camvid
+  - Cityscapes
+  - MappingChallenge
+  - MotsChallenge
+  - Coco
+  - PascalVoc2012
+  - Taco
+  - Shapes (randomly creating triangles, rectangles and circles)
+  - Toy (Overlaying TinyImageNet with MNIST)
+
+- Distributed Training on Multiple GPUs
+- Hyper Parameter Optimization using WandB
+- WandB Integration
+- Easily create TFRecord from Directory
+
+- Models:
+
+  - Unet
+  - Erfnet
+
+- Losses:
+
+  - Catagorical Crossentropy
+  - Binary Crossentropy
+  - Crossentropy + SSIM
+  - Dice
+  - Crossentropy + Dice
+  - Tversky
+  - Focal
+  - Focal + Tversky
+
+- Activations:
+
+  - mish
+  - swish
+  - relu6
+
+- Optimizers:
+
+  - Ranger
+  - RAdam
+
+- Normalization
+
+  - Instance Norm
+  - Batch Norm
+
+- On the fly Augmentations
+
+  - flip left/right
+  - flip up/down
+  - rot 180
+  - color
+
 ## Requirements
 
 ```shell
 sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 ```
 
-#### Tensorflow & Tensorflow Addons
+#### Tensorflow (2.x) & Tensorflow Addons (optional)
 
 ```shell
 pip install tensorflow-gpu==2.1.0 --upgrade
@@ -24,17 +83,25 @@ pip install tensorflow-addons==0.7.0 --upgrade
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
-    -logdir 'logs/taco-binary-test' -o 'ranger' -lr 5e-3 --size 256,256 \
+    -logdir 'logs/taco-binary-test' -o 'adam' -lr 5e-3 --size 256,256 \
     -l 'binary_crossentropy' -fa 'sigmoid' \
-    --train_on_generator
+    --train_on_generator --gpus='0'
 ```
 
 ### Using a fixed record path
 
 ```bash
 python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscapes/records/cityscapes-512x256-rgb/ \
-    -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'ranger' -lr 1e-4 -l 'categorical_crossentropy' \
+    -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'adam' -lr 1e-4 -l 'categorical_crossentropy' \
     -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish'
+```
+
+### Multi GPU training
+
+```bash
+python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscapes/records/cityscapes-512x256-rgb/ \
+    -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'adam' -lr 1e-4 -l 'categorical_crossentropy' \
+    -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0,1,2,3' -a 'mish'
 ```
 
 ## Using Code
@@ -133,17 +200,6 @@ There are the following addition arguments:
 - cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
 
 ## Datasets
-
-- Ade20k
-- Camvid
-- Cityscapes
-- MappingChallenge
-- MotsChallenge
-- Coco
-- PascalVoc2012
-- Taco
-- Shapes (randomly creating triangles, rectangles and circles)
-- Toy (Overlaying TinyImageNet with MNIST)
 
 ```python
 from tf_semantic_sementation.datasets import get_dataset by name, datasets_by_name, DataType, get_cache_dir

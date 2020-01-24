@@ -4,20 +4,20 @@ from .settings import logger
 import numpy as np
 import tensorflow as tf
 import wandb
-from tensorboardX import SummaryWriter
+import imageio
 
 
 class PredictionCallback(tf.keras.callbacks.Callback):
-    """Predictions logged using tensorboardX"""
+    """Predictions logged using tensorflow summary writer"""
 
     def __init__(self, model, logdir, val_generator, scaled_mask, binary_threshold=0.5, update_freq=1):
         super(PredictionCallback, self).__init__()
         self.val_generator = val_generator
-        self.writer = SummaryWriter(logdir=logdir)
+        self.summary_writer = tf.summary.create_file_writer(logdir)
         self.scaled_mask = scaled_mask
         self.binary_threshold = binary_threshold
         self._model = model
-        self.num_classes = self._model.output.shape.as_list()[-1]
+        self.num_classes = self._model.output.shape.as_list()[-1] if not scaled_mask else 2
         self.update_freq = update_freq
 
     def on_epoch_end(self, epoch, logs={}):
@@ -34,46 +34,63 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                 input_batch = input_batch.numpy()
                 target_batch = target_batch.numpy()
                 break
-
+            # TODO: experiment with tf.summary.flush()
             # input_batch, target_batch = next(iter(self.val_generator.as_numpy_iterator()))
 
             if self.scaled_mask:
                 target_batch = np.expand_dims(target_batch, axis=-1)
 
+            batch_size = input_batch.shape[0]
+
             # predict
             pred_batch = self._model.predict_on_batch(input_batch).numpy()
 
-            predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
-            self.writer.add_images('inputs/with_predictions', predictions_on_inputs, dataformats='NHWC', global_step=epoch)
+            with self.summary_writer.as_default():
 
-            targets_on_inputs = masks.get_colored_segmentation_mask(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
-            self.writer.add_images('inputs/with_targets', targets_on_inputs, dataformats='NHWC', global_step=epoch)
+                def add_images(name, images):
+                    images = tf.split(images, num_or_size_splits=batch_size, axis=0)
+                    image = tf.concat(images, axis=2)
+                    tf.summary.image(name, image, step=epoch, max_outputs=batch_size)
 
-            targets_rgb = masks.get_colored_segmentation_mask(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
-            self.writer.add_images('targets/rgb', targets_rgb, dataformats='NHWC', global_step=epoch)
+                add_images('inputs', input_batch)
+                # colored
 
-            pred_rgb = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
-            self.writer.add_images('predictions/rgb', pred_rgb, dataformats='NHWC', global_step=epoch)
+                predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                add_images('inputs/with_predictions', predictions_on_inputs)
 
-            if not self.scaled_mask:
-                pred_batch = np.argmax(pred_batch, axis=-1).astype(np.float32)
-                target_batch = np.argmax(target_batch, axis=-1).astype(np.float32)
+                targets_on_inputs = masks.get_colored_segmentation_mask(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                add_images('inputs/with_targets', targets_on_inputs)
 
-                # reshape, that add_images works
-                pred_batch = np.expand_dims(pred_batch, axis=-1)
-                target_batch = np.expand_dims(target_batch, axis=-1)
-            else:
-                pred_batch[pred_batch > self.binary_threshold] = 1.0
-                pred_batch[pred_batch <= self.binary_threshold] = 0.0
+                targets_rgb = masks.get_colored_segmentation_mask(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                add_images('targets/rgb', targets_rgb)
 
-            self.writer.add_images('inputs', input_batch, dataformats='NHWC', global_step=epoch)
-            self.writer.add_images('targets', target_batch, dataformats='NHWC', global_step=epoch)
-            self.writer.add_images('predictions', pred_batch, dataformats='NHWC', global_step=epoch)
+                pred_rgb = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                add_images('predictions/rgb', pred_rgb)
 
-            # wandb_logs.update({"targets": [wandb.Image(i) for i in target_batch]})
-            # wandb_logs.update({"inputs": [wandb.Image(i) for i in input_batch]})
-            # wandb_logs.update({"predictions": [wandb.Image(i) for i in pred_batch]})
-            # wandb.log(wandb_logs, step=epoch)
+                if not self.scaled_mask:
+                    pred_batch = np.argmax(pred_batch, axis=-1).astype(np.float32)
+                    target_batch = np.argmax(target_batch, axis=-1).astype(np.float32)
+
+                    # reshape, that add_images works
+                    pred_batch = np.expand_dims(pred_batch, axis=-1)
+                    target_batch = np.expand_dims(target_batch, axis=-1)
+                else:
+                    pred_batch[pred_batch > self.binary_threshold] = 1.0
+                    pred_batch[pred_batch <= self.binary_threshold] = 0.0
+
+                # simple
+                intersection = np.logical_or(target_batch, pred_batch).astype(np.float32)
+                union = np.logical_and(target_batch, pred_batch).astype(np.float32)
+
+                add_images('metrics/intersection', intersection)
+                add_images('metrics/union', union)
+
+                # scale
+                target_batch = (target_batch * 255. / (self.num_classes - 1)).astype(np.uint8)
+                pred_batch = (pred_batch * 255. / (self.num_classes - 1)).astype(np.uint8)
+
+                add_images('targets', target_batch)
+                add_images('predictions', pred_batch)
 
 
 class SaveBestWeights(tf.keras.callbacks.Callback):

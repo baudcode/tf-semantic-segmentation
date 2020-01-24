@@ -19,6 +19,8 @@
   - Taco
   - Shapes (randomly creating triangles, rectangles and circles)
   - Toy (Overlaying TinyImageNet with MNIST)
+  - ISIC2018
+  - CVC-ClinicDB
 
 - Distributed Training on Multiple GPUs
 - Hyper Parameter Optimization using WandB

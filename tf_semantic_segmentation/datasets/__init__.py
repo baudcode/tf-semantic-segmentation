@@ -11,6 +11,7 @@ from . import sun
 from . import toy
 from . import ade20k
 from . import isic
+from . import cvc_clinicdb
 
 from .directory import DirectoryDataset
 from .utils import DataType, get_split, get_split_from_list, download_records, google_drive_records_by_tag
@@ -37,7 +38,8 @@ datasets_by_name = {
     "toy": toy.Toy,
     "mappingchallenge": mapping_challenge.MappingChallenge,
     "ade20k": ade20k.Ade20k,
-    "isic2018": isic.ISIC2018
+    "isic2018": isic.ISIC2018,
+    "cvc_clinicdb": cvc_clinicdb.CVCClinicDB
 }
 
 

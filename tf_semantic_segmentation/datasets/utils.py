@@ -1,4 +1,5 @@
 from ..utils import get_files, download_from_google_drive, download_and_extract
+from ..settings import logger
 
 import random
 import imageio
@@ -120,3 +121,14 @@ def download_records(tag, destination_dir):
         download_and_extract(('%s.zip' % tag, drive_id), destination_dir, chk_exists=False)
     else:
         raise Exception("cannot download records of tag %s, please use one of %s" % (tag, str(google_drive_records_by_tag.keys())))
+
+
+def test_dataset(ds):
+    logger.debug("testing dataset %s" % ds.__class__.__name__)
+    for data_type in DataType.get():
+        logger.debug("using data_type %s" % data_type)
+        tfds = convert2tfdataset(ds, data_type)
+
+        for image, mask, num_classes in tfds:
+            logger.debug("image shape: %s, %s |  mask shape: %s, %s, %d (max) | num_classes: %d" % (image.shape, image.dtype, mask.shape, mask.dtype, mask.numpy().max(), num_classes))
+            break

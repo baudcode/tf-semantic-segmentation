@@ -1,6 +1,6 @@
 # TF Semantic Segmentation
 
-[![Build Status](https://travis-ci.com/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.com/baudcode/tf-semantic-segmentation)
+[![Build Status](https://travis-ci.org/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.org/baudcode/tf-semantic-segmentation)
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
 [![latest tag](https://img.shields.io/github/v/tag/baudcode/tf-semantic-segmentation)]()
@@ -80,7 +80,7 @@ pip install tensorflow-addons==0.7.0 --upgrade
 
 ## Training
 
-### Using on the the inbuild datasets (generator)
+### On inbuild datasets (generator)
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
@@ -251,18 +251,20 @@ tf-semantic-segmentation-tfrecord-writer -d 'toy' -c /hdd/datasets/ -s '128,128'
 docker build -t tf_semantic_segmentation -f docker/Dockerfile ./
 ```
 
-## Prediction UI
+## Prediction
 
+```shell
+pip install matplotlib
 ```
-# install
-echo "deb [arch=amd64] http://storage.googleapis.com/tensorflow-serving-apt stable tensorflow-model-server tensorflow-model-server-universal" | sudo tee /etc/apt/sources.list.d/tensorflow-serving.list && \
-curl https://storage.googleapis.com/tensorflow-serving-apt/tensorflow-serving.release.pub.gpg | sudo apt-key add -
-sudo apt-get update && apt-get install tensorflow-model-server
 
-# start
-tensorflow_model_server --rest_api_port=8501 --model_base_path=/home/user/logs/taco_binary_erfnet_256x256_bs_8_rgb_ranger_lr_5e-3-e100-ce_label_smoothing/saved_model/
+- On image
 
-# start
-pip install streamlit
-python setup.py install && streamlit run tf_semantic_segmentation/eval/viewer.py
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5  -i image.png
+```
+
+- On TFRecord (data type 'val' is default)
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/camvid/
 ```

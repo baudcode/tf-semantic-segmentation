@@ -166,15 +166,17 @@ def multires_unet(input_shape=(256, 256, 1), num_classes=2):
         y = multires_block(features, y)
 
     # 1x1 for classification
+    base_model = Model(inputs=[inputs], outputs=[y])
+
     y = conv2d_bn(y, num_classes, 1, 1, activation=None)
     model = Model(inputs=[inputs], outputs=[y])
 
-    return model
+    return model, base_model
 
 
 def main():
     # Define the model
-    model = multires_unet((128, 128, 3), num_classes=3)
+    model, _ = multires_unet((128, 128, 3), num_classes=3)
     print(model.summary())
 
 

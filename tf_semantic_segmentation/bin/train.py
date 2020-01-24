@@ -3,7 +3,7 @@ from tf_semantic_segmentation.datasets import get_dataset_by_name, DataType, dat
     download_records, DirectoryDataset, TFWriter, TFReader
 from tf_semantic_segmentation.datasets.utils import convert2tfdataset
 from tf_semantic_segmentation.losses import get_loss_by_name, losses_by_name
-from tf_semantic_segmentation.metrics import metrics_by_name, get_metric_by_name
+from tf_semantic_segmentation.metrics import metrics_by_name, get_metric_by_name, iou_score
 from tf_semantic_segmentation.processing import dataset as preprocessing_ds
 from tf_semantic_segmentation.processing import ColorMode
 from tf_semantic_segmentation.settings import logger
@@ -120,7 +120,9 @@ def get_args(args=None):
 
     # tensorboard
     parser.add_argument('--no_tensorboard', action='store_true')
-    parser.add_argument('--no_tensorboard_images', action='store_true', help='do not show any images in tensorboard/wandb')
+    parser.add_argument('--tensorboard_train_images', action='store_true', help='show train images in tensorboard/wandb')
+    parser.add_argument('--tensorboard_val_images', action='store_true', help='show val images in tensorboard/wandb')
+    parser.add_argument('--tensorboard_test_images', action='store_true', help='show test images in tensorboard/wandb')
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
     parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
@@ -174,7 +176,7 @@ def train_test_model(args, hparams=None, reporter=None):
     os.makedirs(args.logdir, exist_ok=True)
 
     if not args.no_tensorboard:
-        callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=False,
+        callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=False, profile_batch=0,
                                                 write_images=False, write_grads=True, update_freq=args.tensorboard_update_freq))
 
     if not args.no_terminate_on_nan:
@@ -253,6 +255,7 @@ def train_test_model(args, hparams=None, reporter=None):
         record_tag = args.record_tag
         record_dir = os.path.join(args.data_dir, 'downloaded', record_tag)
         download_records(record_tag, record_dir)
+        num_classes = TFReader(record_dir).num_classes
 
     if args.size and args.color_mode != ColorMode.NONE:
         input_shape = (args.size[1], args.size[0], 3 if args.color_mode == ColorMode.RGB else 1)
@@ -338,7 +341,7 @@ def train_test_model(args, hparams=None, reporter=None):
     train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=True)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, args.batch_size, methods=args.augmentations)
+    augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
@@ -346,16 +349,40 @@ def train_test_model(args, hparams=None, reporter=None):
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 
-    if not args.no_tensorboard and not args.no_tensorboard_images:
-        val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
-        val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-        prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
-                                                                  scaled_mask=scale_mask,
-                                                                  binary_threshold=args.binary_threshold,
-                                                                  update_freq=args.tensorboard_images_freq)
-        callbacks.append(prediction_callback)
-        prediction_callback.on_epoch_end(-1, {})
+    # log images to tensorboard
+    if not args.no_tensorboard:
+        if args.tensorboard_train_images:
+            train_ds_images = convert2tfdataset(ds, DataType.TRAIN) if args.train_on_generator else reader.get_dataset(DataType.TRAIN)
+            train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+            train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+            train_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
+                                                                            scaled_mask=scale_mask,
+                                                                            binary_threshold=args.binary_threshold,
+                                                                            update_freq=args.tensorboard_images_freq)
+            callbacks.append(train_prediction_callback)
+            train_prediction_callback.on_epoch_end(-1, {})
+
+        if args.tensorboard_val_images:
+            val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
+            val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+            val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+            val_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
+                                                                          scaled_mask=scale_mask,
+                                                                          binary_threshold=args.binary_threshold,
+                                                                          update_freq=args.tensorboard_images_freq)
+            callbacks.append(val_prediction_callback)
+            val_prediction_callback.on_epoch_end(-1, {})
+
+        if args.tensorboard_test_images:
+            test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
+            test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+            test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+            test_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'test'), val_ds_images,
+                                                                           scaled_mask=scale_mask,
+                                                                           binary_threshold=args.binary_threshold,
+                                                                           update_freq=args.tensorboard_images_freq)
+            callbacks.append(test_prediction_callback)
+            test_prediction_callback.on_epoch_end(-1, {})
 
     if args.start_tensorboard:
         kill_start_tensorboard(args.logdir, port=args.tensorboard_port)

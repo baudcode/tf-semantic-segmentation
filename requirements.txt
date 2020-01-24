@@ -7,4 +7,3 @@ scipy
 xmltodict
 pillow
 pytz
-tensorboardX

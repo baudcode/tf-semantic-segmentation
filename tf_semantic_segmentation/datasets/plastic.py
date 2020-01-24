@@ -25,6 +25,24 @@ class Taco(Dataset):
         self.annotations_file = download_file(self.ANNOTATIONS_URL, self.cache_dir)
         self.ann_reader = CocoAnnotationReader(self.annotations_file)
         self.mode = mode
+        self.split = self.generate()
+
+    def generate(self):
+        data_dir = os.path.join(self.cache_dir, 'dataset')
+        masks_dir = os.path.join(self.cache_dir, 'masks', self.mode)
+        self.download_files(self.annotations_file, data_dir)
+
+        anns = self.ann_reader.read_annotations()
+
+        output_paths = []
+        input_paths = get_files(data_dir, extensions=['jpg'])
+        for image_path in tqdm.tqdm(input_paths, desc='generating masks'):
+            output_paths.append(self.ann_reader.generate_masks(image_path, anns, masks_dir, data_dir=data_dir, mode=self.mode))
+
+        trainset = list(zip(input_paths, output_paths))
+        assert(len(trainset) != 0)
+
+        return get_split(trainset)
 
     @property
     def labels(self):
@@ -56,22 +74,7 @@ class Taco(Dataset):
                     download_file(url_original, os.path.dirname(file_path), file_name=os.path.basename(file_path))
 
     def raw(self):
-
-        data_dir = os.path.join(self.cache_dir, 'dataset')
-        masks_dir = os.path.join(self.cache_dir, 'masks', self.mode)
-        self.download_files(self.annotations_file, data_dir)
-
-        anns = self.ann_reader.read_annotations()
-
-        output_paths = []
-        input_paths = get_files(data_dir, extensions=['jpg'])
-        for image_path in tqdm.tqdm(input_paths):
-            output_paths.append(self.ann_reader.generate_masks(image_path, anns, masks_dir, data_dir=data_dir, mode=self.mode))
-
-        trainset = list(zip(input_paths, output_paths))
-        assert(len(trainset) != 0)
-
-        return get_split(trainset)
+        return self.split
 
 
 class TacoBinary(Taco):

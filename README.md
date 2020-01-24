@@ -82,13 +82,20 @@ pip install tensorflow-addons==0.7.0 --upgrade
 
 ## Training
 
+### Hint: To see train/test/val images you have to start tensorboard like this
+
+```bash
+tensorboard --logdir=logs/ --reload_multifile=true
+```
+
 ### On inbuild datasets (generator)
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
     -logdir 'logs/taco-binary-test' -o 'adam' -lr 5e-3 --size 256,256 \
     -l 'binary_crossentropy' -fa 'sigmoid' \
-    --train_on_generator --gpus='0'
+    --train_on_generator --gpus='0' \
+    --tensorboard_train_images --tensorboard_val_images
 ```
 
 ### Using a fixed record path
@@ -96,7 +103,8 @@ python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
 ```bash
 python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscapes/records/cityscapes-512x256-rgb/ \
     -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'adam' -lr 1e-4 -l 'categorical_crossentropy' \
-    -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish'
+    -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish' \
+    --tensorboard_train_images --tensorboard_val_images
 ```
 
 ### Multi GPU training

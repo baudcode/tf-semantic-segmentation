@@ -50,9 +50,9 @@ class Dataset(object):
         data = self.raw()[data_type]
 
         def gen():
-            for image_path, mask_path in data:
+            for example in data:
                 try:
-                    yield imageio.imread(image_path), imageio.imread(mask_path)
+                    yield self.parse_example(example)
                 except:
-                    logger.error("could not read either %s or %s" % (image_path, mask_path))
+                    logger.error("could not read either one of these files %s" % str(example))
         return gen

@@ -4,6 +4,7 @@ from .utils import get_split, DataType, Color
 
 import imageio
 import os
+import numpy as np
 
 
 class CamSeq01(Dataset):
@@ -15,6 +16,11 @@ class CamSeq01(Dataset):
 
     DATA_URL = "http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamSeq01/CamSeq01.zip"
     LABEL_COLORS_URL = "http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/data/label_colors.txt"
+
+    def __init__(self, cache_dir):
+        super(CamSeq01, self).__init__(cache_dir)
+        self._labels = self.labels
+        self._colormap = self.colormap
 
     def raw(self):
         dataset_dir = os.path.join(self.cache_dir, 'dataset')
@@ -54,36 +60,22 @@ class CamSeq01(Dataset):
 
         return labels
 
-    def get(self, data_type=DataType.TRAIN):
-        import imageio
-        import numpy as np
+    def parse_example(self, example):
+        image_path, target_path = example
+        i = imageio.imread(image_path)
+        t = imageio.imread(target_path)
+        mask = np.zeros((i.shape[0], i.shape[1]), np.uint8)
 
-        data = self.raw()[data_type]
-        colormap = self.colormap
-        labels = self.labels
+        for color, label in self._colormap.items():
+            color = [color.r, color.g, color.b]
+            idxs = np.where(np.all(t == color, axis=-1))
+            mask[idxs] = self._labels.index(label)
 
-        print(colormap)
-
-        def gen():
-            for image_path, target_path in data:
-                i = imageio.imread(image_path)
-                t = imageio.imread(target_path)
-                mask = np.zeros((i.shape[0], i.shape[1]), np.uint8)
-
-                for color, label in colormap.items():
-                    color = [color.r, color.g, color.b]
-                    idxs = np.where(np.all(t == color, axis=-1))
-                    mask[idxs] = labels.index(label)
-
-                print(i.shape, mask.shape, mask.max(), mask.min())
-                yield i, mask
-        return gen
+        return i, mask
 
 
 if __name__ == "__main__":
+    from .utils import test_dataset
+
     ds = CamSeq01('/hdd/datasets/camvid')
-    print(ds.colormap)
-    print(ds.labels)
-    print(ds.num_examples(DataType.TRAIN))
-    print(ds.num_examples(DataType.VAL))
-    print(ds.num_examples(DataType.TEST))
+    test_dataset(ds)

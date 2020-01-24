@@ -222,16 +222,6 @@ class PascalVOC2012(Dataset):
 
         return imageio.imread(image_path), mask_idx
 
-    def get(self, data_type=DataType.TRAIN):
-
-        data = self.raw()[data_type]
-
-        def gen():
-            for image_path, mask_path, xml_path in data:
-                yield self.parse_example((image_path, mask_path, xml_path))
-
-        return gen
-
 
 if __name__ == "__main__":
     from ..visualizations import show

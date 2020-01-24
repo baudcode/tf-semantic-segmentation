@@ -26,28 +26,22 @@ class MotsChallenge(Dataset):
 
         return get_split_from_dirs(images_dir, annotations_dir)
 
-    def get(self, data_type=DataType.TRAIN):
+    def parse_example(self, example):
+        image_path, target_path = example
+        i = imageio.imread(image_path)
+        t = imageio.imread(target_path)
 
-        data = self.raw()[data_type]
-        labels = self.labels
+        obj_ids = np.unique(t)
+        # to correctly interpret the id of a single object
 
-        def gen():
-            for image_path, target_path in data:
-                i = imageio.imread(image_path)
-                t = imageio.imread(target_path)
+        mask = np.zeros(i.shape[:2], np.uint8)
+        for obj_id in obj_ids:
+            class_id = obj_id // 1000
 
-                obj_ids = np.unique(t)
-                # to correctly interpret the id of a single object
+            idxs = np.where(np.all(t == obj_id, axis=-1))
+            mask[idxs] = class_id
 
-                mask = np.zeros(i.shape[:2], np.uint8)
-                for obj_id in obj_ids:
-                    class_id = obj_id // 1000
-
-                    idxs = np.where(np.all(t == obj_id, axis=-1))
-                    mask[idxs] = class_id
-
-                yield i, mask
-        return gen
+        return i, mask
 
 
 if __name__ == "__main__":

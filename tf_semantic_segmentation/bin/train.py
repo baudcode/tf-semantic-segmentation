@@ -279,7 +279,7 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.warning('using only 1 class for sigmoid activation function to work')
         num_classes = 1
 
-    logger.debug('strategy: %s' % str(strategy))
+    logger.info('strategy: %s' % str(strategy))
 
     # check valid model args
     if args.model in models_by_name:

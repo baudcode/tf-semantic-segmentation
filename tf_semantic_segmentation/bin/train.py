@@ -46,7 +46,7 @@ def get_args(args=None):
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-s', '--size', default=None, type=tuple_type)
+    parser.add_argument('-s', '--size', default=None, type=tuple_type, help='height,width')
     parser.add_argument('-m', '--model', default='erfnet', choices=list(models_by_name.keys()))
     parser.add_argument('-gpu', '--gpus', default=[0], type=int_list_type)
     parser.add_argument('-cm', '--color_mode', default=0, type=int, choices=color_modes, help='0 (RGB), 1 (GRAY), 2 (NONE)')
@@ -258,7 +258,7 @@ def train_test_model(args, hparams=None, reporter=None):
         num_classes = TFReader(record_dir).num_classes
 
     if args.size and args.color_mode != ColorMode.NONE:
-        input_shape = (args.size[1], args.size[0], 3 if args.color_mode == ColorMode.RGB else 1)
+        input_shape = (args.size[0], args.size[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
     elif args.train_on_generator:
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")

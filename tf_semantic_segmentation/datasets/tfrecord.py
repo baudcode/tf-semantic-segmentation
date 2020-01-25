@@ -84,8 +84,9 @@ class TFReader:
 
     @property
     def size(self):
+        """ List [height, width] """
         for image, _, _ in self.get_dataset(DataType.TRAIN):
-            return image.numpy().shape[:2][::-1]
+            return image.numpy().shape[:2]
 
     @property
     def input_shape(self):

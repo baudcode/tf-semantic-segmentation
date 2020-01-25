@@ -39,7 +39,7 @@ def main():
     model = load_model(args.model_path, compile=False)
     logger.info("model loaded, expects input shape of %s" % str(model.input.shape))
 
-    size = tuple(model.input.shape[1:3][::-1])
+    size = tuple(model.input.shape[1:3])
     depth = model.input.shape[-1]
     color_mode = pre_dataset.ColorMode.GRAY if depth == 1 else pre_dataset.ColorMode.RGB
 

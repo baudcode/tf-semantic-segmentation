@@ -60,7 +60,7 @@ def main():
     parser.add_argument('-c', '--data_dir', required=True)
     parser.add_argument('-o', '--output_dir', required=True)
     parser.add_argument('-bs', '--batch_size', type=int, default=4)
-    parser.add_argument('-s', '--size', default=None, type=lambda x: list(map(int, x.split(','))))
+    parser.add_argument('-s', '--size', default=None, type=lambda x: list(map(int, x.split(','))), help=['height,width'])
     parser.add_argument('-rm', '--resize_method', default='resize_with_pad')
     parser.add_argument('-cm', '--color_mode', default=ColorMode.NONE, type=int)
     parser.add_argument('-overwrite', '--overwrite', action='store_true')

@@ -12,6 +12,7 @@ from . import toy
 from . import ade20k
 from . import isic
 from . import cvc_clinicdb
+from . import cub
 
 from .directory import DirectoryDataset
 from .utils import DataType, get_split, get_split_from_list, download_records, google_drive_records_by_tag
@@ -39,13 +40,17 @@ datasets_by_name = {
     "mappingchallenge": mapping_challenge.MappingChallenge,
     "ade20k": ade20k.Ade20k,
     "isic2018": isic.ISIC2018,
-    "cvc_clinicdb": cvc_clinicdb.CVCClinicDB
+    "cvc_clinicdb": cvc_clinicdb.CVCClinicDB,
+    'cub2002011binary': cub.CUB2002011Binary,
+    'cub2002011category': cub.CUB2002011Category,
 }
 
 
 def get_cache_dir(data_dir, name):
     if "taco" in name.lower():
         cache_dir = os.path.join(data_dir, 'taco')
+    elif "cub2002011" in name.lower():
+        cache_dir = os.path.join(data_dir, 'cub2002011')
     elif 'isic' in name.lower():
         cache_dir = os.path.join(data_dir, 'isic')
     elif 'coco' in name.lower():

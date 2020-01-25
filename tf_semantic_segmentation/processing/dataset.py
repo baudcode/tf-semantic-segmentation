@@ -18,6 +18,9 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     Returns:
     tuple (image, mask)
     """
+    if len(image.shape) == 2:
+        image = tf.expand_dims(image, axis=-1)
+
     if color_mode == ColorMode.RGB and image.shape[-1] == 1:
         image = tf.image.grayscale_to_rgb(image)
 

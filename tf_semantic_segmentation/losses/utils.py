@@ -28,10 +28,11 @@ def onehot2image(y):
         # assume masks are scaled using sigmoid
         return y
 
+    num_classes = y.shape[-1]
     y = backend.argmax(y, axis=-1)
     y = backend.expand_dims(y, axis=-1)
     y = backend.cast(y, backend.floatx())
-    y = backend.cast(y, backend.floatx()) / backend.cast(backend.max(y), backend.floatx())
+    y = backend.cast(y, backend.floatx()) / backend.cast((num_classes - 1), backend.floatx())
     return y
 
 

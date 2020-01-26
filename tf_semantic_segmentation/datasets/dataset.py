@@ -1,6 +1,7 @@
 from ..settings import logger
 
 import imageio
+import random
 
 
 class DataType:
@@ -45,6 +46,14 @@ class Dataset(object):
 
     def num_examples(self, data_type):
         return len(self.raw()[data_type])
+
+    def total_examples(self):
+        return sum([self.num_examples(dt) for dt in DataType.get()])
+
+    def get_random_example(self, data_type=DataType.TRAIN):
+        data = self.raw()[data_type]
+        example = random.choice(data)
+        return self.parse_example(example)
 
     def get(self, data_type=DataType.TRAIN):
         data = self.raw()[data_type]

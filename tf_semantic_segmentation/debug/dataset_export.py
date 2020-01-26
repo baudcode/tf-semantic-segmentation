@@ -12,13 +12,23 @@ import tqdm
 import multiprocessing
 
 
+def write_labels(path, labels):
+    with open(path, 'w') as writer:
+        for label in labels:
+            writer.write(label.strip() + "\n")
+
+
+def read_labels(path):
+    with open(path, 'r') as reader:
+        lines = reader.readlines()
+        labels = list(map(lambda x: x[:-1], lines))
+    return labels
+
+
 def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mode=ColorMode.NONE, overwrite=False, batch_size=4):
 
     os.makedirs(output_dir, exist_ok=True)
-
-    with open(os.path.join(output_dir, 'labels.txt'), 'w') as writer:
-        for label in ds.labels:
-            writer.write(label.strip() + "\n")
+    write_labels(os.path.join(output_dir, 'labels.txt'), ds.labels)
 
     def preprocess_fn(image, mask, num_classes):
         image = tf.image.convert_image_dtype(image, tf.float32)
@@ -36,7 +46,6 @@ def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mod
         tfds = convert2tfdataset(ds, data_type)
         tfds = tfds.map(preprocess_fn, num_parallel_calls=multiprocessing.cpu_count())
         tfds = tfds.batch(batch_size)
-        tfds = tfds.repeat(1)
 
         total_examples = ds.num_examples(data_type)
         for k, (images, masks) in tqdm.tqdm(enumerate(tfds), total=total_examples // batch_size, desc="exporting",
@@ -46,9 +55,9 @@ def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mod
                 image = images[g]
                 mask = masks[g]
 
-                image_path = os.path.join(images_dir, '%d.png' % i)
+                image_path = os.path.join(images_dir, '%d.jpg' % i)
                 mask_path = os.path.join(masks_dir, '%d.png' % i)
-                if not os.path.exists(image_path) or (os.path.exists(image_path) and overwrite):
+                if (not os.path.exists(image_path) or not os.path.exists(image_path)) or overwrite:
                     imageio.imwrite(image_path, image)
                     imageio.imwrite(mask_path, mask)
 

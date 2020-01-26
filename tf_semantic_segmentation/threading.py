@@ -14,13 +14,8 @@ class ThreadWithReturnValue(threading.Thread):
         self._return = None
 
     def run(self):
-        if sys.version_info >= (3, 0):
-            if self._target is not None:
-                self._return = self._target(*self._args, **self._kwargs)
-        else:
-            if self._Thread__target is not None:
-                self._return = self._Thread__target(
-                    *self._Thread__args, **self._Thread__kwargs)
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
 
     def join(self, *args):
         if sys.version_info >= (3, 0):
@@ -42,15 +37,15 @@ def parallize(f, args, threads=None, desc='threading'):
             - f: function
             - args: list or list(tuple), list when threads not None
     """
-    if threads is not None:
+    def parse_arg(arg):
+        if type(arg) == list or type(arg) == set or type(arg) == tuple:
+            return tuple(arg)
+        elif type(arg) == dict:
+            return arg
+        else:
+            return (arg, )
 
-        def parse_arg(arg):
-            if type(arg) == list or type(arg) == set or type(arg) == tuple:
-                return tuple(arg)
-            elif type(arg) == dict:
-                return arg
-            else:
-                return (arg, )
+    if threads is not None:
 
         results = []
         for i in tqdm.trange(0, len(args), threads, desc=desc):
@@ -75,8 +70,10 @@ def parallize(f, args, threads=None, desc='threading'):
             active_threads = [ThreadWithReturnValue(
                 target=f, kwargs=arg) for arg in args]
         else:
+            args = [parse_arg(arg) for arg in args]
             active_threads = [ThreadWithReturnValue(
                 target=f, args=arg) for arg in args]
+
         [thread.start() for thread in active_threads]
         return [thread.join() for thread in active_threads]
 

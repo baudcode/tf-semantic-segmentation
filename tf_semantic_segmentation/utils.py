@@ -75,6 +75,16 @@ def kill_process_by_port(port, protocol='tcp'):
     ], block=True)
 
 
+def kill(port):
+    pid = str(subprocess.check_output(['lsof', '-t', '-i:6006']), 'utf-8')[:-1]
+
+    if pid:
+        pid = int(pid)
+
+    cmd = ['kill', '%d' % pid]
+    return call_for_ret_code(cmd)
+
+
 def get_image_from_url(url, auth=None):
     req = requests.get(url, auth=auth)
     image = PIL.Image.open(BytesIO(req.content))
@@ -104,7 +114,7 @@ def get_random_image(width=640, height=480, grayscale=False):
 
 def get_files(directory, extensions=None):
     files = []
-    extensions = [ext.lower() for ext in extensions]
+    extensions = [ext.lower() for ext in extensions] if extensions else None
     for root, _, filenames in sorted(os.walk(directory)):
         if extensions:
             files += [os.path.join(root, name) for name in sorted(filenames)
@@ -328,7 +338,7 @@ def _google_drive_get_confirm_token(response):
     return None
 
 
-def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False, silent=False, auth=None, file_name=None, cache_dir='/tmp/extracted'):
+def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False, silent=False, auth=None, file_name=None, cache_dir='/tmp/extracted', remove_archive_on_success=True):
     """ Download and extract rar, zip and tar
 
     Args:
@@ -338,6 +348,7 @@ def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False,
         silent: bool, do not print anything during downloading if true
         file_name: file name of the downloaded file (f.e. filename too long)
         auth: dict, user authentification {"username": your_user_name, "password": your_password}
+        remove_archive_on_success: bool, remove archive when the extraction was successful
 
     Returns:
         str: folder where the dataset is extracted to
@@ -356,7 +367,7 @@ def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False,
             archive = download_from_google_drive(
                 drive_id=drive_id, destination_dir=cache_dir, filename=name, silent=silent)
 
-        extract(archive, destination_dir)
+        extract(archive, destination_dir, remove_archive_on_success=remove_archive_on_success)
 
     return destination_dir
 

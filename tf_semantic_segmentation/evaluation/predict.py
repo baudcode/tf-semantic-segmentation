@@ -48,7 +48,7 @@ def main():
     if args.record_dir:
         dataset = TFReader(args.record_dir).get_dataset(args.record_data_type)
         dataset = dataset.map(pre_dataset.get_preprocess_fn(size, color_mode, args.resize_method,
-                                                            scale_mask=args.scale_mask, is_training=False))
+                                                            scale_mask=args.scale_mask))
 
         for image, target in dataset:
             image_batch = np.expand_dims(image.numpy(), axis=0)

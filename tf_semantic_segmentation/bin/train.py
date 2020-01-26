@@ -338,14 +338,14 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("building input pipeline")
     # train preprocessing
-    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=True)
+    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
-    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, is_training=False)
+    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 

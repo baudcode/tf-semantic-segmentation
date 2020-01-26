@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 import multiprocessing
 
+resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
+
 
 def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad'):
     """
@@ -57,7 +59,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, is_training=True):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
 
     def map_fn(image, mask, num_classes):
 

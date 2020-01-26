@@ -36,6 +36,7 @@ datasets_by_name = {
     "pascalvoc2012": pascal.PascalVOC2012,
     # dummy datasets for testing
     "shapes": shapes.ShapesDS,
+    "shapesmini": shapes.ShapesDSMini,
     "toy": toy.Toy,
     "mappingchallenge": mapping_challenge.MappingChallenge,
     "ade20k": ade20k.Ade20k,

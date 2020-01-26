@@ -37,7 +37,9 @@ class ShapesDS(Dataset):
 
     @property
     def labels(self):
-        return self.SHAPES
+        l = ['bg']
+        l.extend(self.SHAPES)
+        return l
 
     def draw_shape(self, image, shape, x, y, w, h, color):
         assert(shape in self.SHAPES)
@@ -94,9 +96,16 @@ class ShapesDS(Dataset):
         return image_path, mask_path
 
     def raw(self):
-
-        print(len(self.trainset), self.trainset[0])
         return get_split(self.trainset)
+
+
+class ShapesDSMini(ShapesDS):
+
+    SHAPES = ['circle']
+
+    def __init__(self, cache_dir, overwrite=False, color_mode=ColorMode.GRAY):
+        super(ShapesDSMini, self).__init__(cache_dir, num_examples=100, size=(32, 32), overwrite=True, color_mode=color_mode,
+                                           max_shapes_per_example=3)
 
 
 if __name__ == "__main__":

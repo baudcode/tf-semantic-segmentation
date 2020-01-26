@@ -8,6 +8,50 @@ import argparse
 import os
 
 
+def write_records_from_directory(directory, record_dir, size=None, color_mode=ColorMode.NONE,
+                                 resize_method='resize', num_examples_per_record=100, overwrite=False):
+    ds = DirectoryDataset(directory)
+
+    if record_dir is None:
+        raise AssertionError("record_dir cannot be None")
+
+    write_records(ds, record_dir, size=size, color_mode=color_mode, resize_method=resize_method,
+                  num_examples_per_record=num_examples_per_record, overwrite=overwrite)
+
+
+def write_records_from_dataset_name(dataset, data_dir, record_dir=None, size=None, color_mode=ColorMode.NONE,
+                                    resize_method='resize', num_examples_per_record=100, overwrite=False):
+
+    cache_dir = get_cache_dir(data_dir, dataset.lower())
+    ds = get_dataset_by_name(dataset, cache_dir)
+
+    # write records
+    if record_dir:
+        record_dir = record_dir
+    else:
+        record_dir = os.path.join(cache_dir, 'records', dataset.lower())
+
+    write_records(ds, record_dir, size=size, color_mode=color_mode, resize_method=resize_method,
+                  num_examples_per_record=num_examples_per_record, overwrite=overwrite)
+
+    return record_dir
+
+
+def write_records(ds, record_dir, size=None, color_mode=ColorMode.NONE, resize_method='resize',
+                  num_examples_per_record=100, overwrite=False):
+
+    def preprocess_fn(image, mask):
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        return resize_and_change_color(image, mask, size, color_mode, resize_method)
+
+    logger.info('wrting records to %s' % record_dir)
+    writer = TFWriter(record_dir)
+    writer.write(ds, overwrite=overwrite, num_examples_per_record=num_examples_per_record, preprocess_fn=preprocess_fn)
+
+    # validate number of examples written
+    writer.validate(ds)
+
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -29,32 +73,11 @@ def main():
 
     if args.dataset:
         assert(args.data_dir is not None), "data_dir argument is required"
-        cache_dir = get_cache_dir(args.data_dir, args.dataset.lower())
-        ds = get_dataset_by_name(args.dataset, cache_dir)
-
-        # write records
-        if args.record_dir:
-            record_dir = args.record_dir
-        else:
-            record_dir = os.path.join(cache_dir, 'records', args.dataset.lower())
+        write_records_from_dataset_name(args.dataset, args.data_dir, args.record_dir, args.size, args.color_mode, args.resize_method,
+                                        args.num_examples_per_record, args.overwrite)
     else:
-        ds = DirectoryDataset(args.directory)
-
-        if args.record_dir is None:
-            raise AssertionError("record_dir arg cannot be None")
-
-        record_dir = args.record_dir
-
-    def preprocess_fn(image, mask):
-        image = tf.image.convert_image_dtype(image, tf.float32)
-        return resize_and_change_color(image, mask, args.size, args.color_mode, args.resize_method)
-
-    logger.info('wrting records to %s' % record_dir)
-    writer = TFWriter(record_dir)
-    writer.write(ds, overwrite=args.overwrite, num_examples_per_record=args.num_examples_per_record, preprocess_fn=preprocess_fn)
-
-    # validate number of examples written
-    writer.validate(ds)
+        write_records_from_directory(args.directory, args.record_dir, args.size, args.color_mode, args.resize_method,
+                                     args.num_examples_per_record, args.overwrite)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import DataType, get_split_from_list, image_generator, Color
+from .utils import DataType, get_split_from_list, Color
 from ..utils import download_and_extract, extract_tar
 from .dataset import Dataset
 

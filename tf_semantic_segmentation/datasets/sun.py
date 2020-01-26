@@ -5,7 +5,7 @@
 
 
 from .dataset import Dataset
-from .utils import get_split, image_generator, DataType
+from .utils import get_split, DataType
 from ..utils import download_and_extract
 from ..settings import logger
 from .pascal import PascalVOC2012

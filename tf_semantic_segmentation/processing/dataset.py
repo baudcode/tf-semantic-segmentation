@@ -20,13 +20,13 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     Returns:
     tuple (image, mask)
     """
-    if len(image.shape) == 2:
+    if len(tf.shape(image)) == 2:
         image = tf.expand_dims(image, axis=-1)
 
-    if color_mode == ColorMode.RGB and image.shape[-1] == 1:
+    if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
         image = tf.image.grayscale_to_rgb(image)
 
-    elif color_mode == ColorMode.GRAY and image.shape[-1] != 1:
+    elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
         image = tf.image.rgb_to_grayscale(image)
 
     if size is not None:
@@ -61,6 +61,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
 
 def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
 
+    @tf.function
     def map_fn(image, mask, num_classes):
 
         # scale between 0 and 1
@@ -68,7 +69,6 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
 
         # resize method for image create float32 image anyway
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method)
-
         if scale_mask:
             num_classes = tf.cast(num_classes, tf.float32)
             mask = tf.cast(mask, tf.float32)

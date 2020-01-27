@@ -82,6 +82,7 @@ def get_args(args=None):
     # data
     parser.add_argument('-data_dir', '--data_dir', default='/hdd/datasets')
     parser.add_argument('-rd', '--record_dir', default=None, help='if none, will be auto detected')
+    parser.add_argument('-ro', '--record_options', default='GZIP', help='record compression options')
     parser.add_argument('-ds', '--dataset', default=None, choices=list(datasets_by_name.keys()))
     parser.add_argument('-rtag', '--record_tag', default=None, choices=list(google_drive_records_by_tag.keys()))
     parser.add_argument('-dir', '--directory', default=None)  # train a model from directory
@@ -241,7 +242,7 @@ def train_test_model(args, hparams=None, reporter=None):
             record_dir = os.path.join(cache_dir, 'records')
             logger.info("using record dir %s" % record_dir)
 
-            writer = TFWriter(record_dir)
+            writer = TFWriter(record_dir, options=args.record_options)
             writer.write(ds)
             writer.validate(ds)
 
@@ -250,12 +251,12 @@ def train_test_model(args, hparams=None, reporter=None):
         if not os.path.exists(args.record_dir):
             raise Exception("cannot find record dir %s" % args.record_dir)
         record_dir = args.record_dir
-        num_classes = TFReader(record_dir).num_classes
+        num_classes = TFReader(record_dir, options=args.record_options).num_classes
     elif args.record_tag:
         record_tag = args.record_tag
         record_dir = os.path.join(args.data_dir, 'downloaded', record_tag)
         download_records(record_tag, record_dir)
-        num_classes = TFReader(record_dir).num_classes
+        num_classes = TFReader(record_dir, options=args.record_options).num_classes
 
     if args.size and args.color_mode != ColorMode.NONE:
         input_shape = (args.size[0], args.size[1], 3 if args.color_mode == ColorMode.RGB else 1)
@@ -263,7 +264,7 @@ def train_test_model(args, hparams=None, reporter=None):
     elif args.train_on_generator:
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")
     else:
-        input_shape = TFReader(record_dir).input_shape
+        input_shape = TFReader(record_dir, options=args.record_options).input_shape
         input_shape = (input_shape[0], input_shape[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
     logger.info("input shape: %s" % str(input_shape))
@@ -332,7 +333,7 @@ def train_test_model(args, hparams=None, reporter=None):
         val_ds = convert2tfdataset(ds, DataType.VAL)
     else:
         logger.info("using tfreader to read record dir %s" % record_dir)
-        reader = TFReader(record_dir)
+        reader = TFReader(record_dir, options=args.record_options)
         train_ds = reader.get_dataset(DataType.TRAIN)
         val_ds = reader.get_dataset(DataType.VAL)
 
@@ -392,6 +393,7 @@ def train_test_model(args, hparams=None, reporter=None):
     elif args.train_on_generator:
         steps_per_epoch = ds.num_examples(DataType.TRAIN) // global_batch_size
     else:
+        logger.warning("Reading total number of input samples, cause no steps were specifed. This may take a while.")
         steps_per_epoch = reader.num_examples(DataType.TRAIN) // global_batch_size
 
     if args.validation_steps != -1:
@@ -399,6 +401,7 @@ def train_test_model(args, hparams=None, reporter=None):
     elif args.train_on_generator:
         validation_steps = ds.num_examples(DataType.VAL) // global_batch_size
     else:
+        logger.warning("Reading total number of input val samples, cause no val_steps were specifed. This may take a while.")
         validation_steps = reader.num_examples(DataType.VAL) // global_batch_size
 
     model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,

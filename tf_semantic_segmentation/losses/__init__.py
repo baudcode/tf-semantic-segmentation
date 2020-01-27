@@ -7,7 +7,7 @@ from .dice import dice_loss, tversky_loss, focal_tversky_loss
 from .combined import categorical_crossentropy_ssim_loss, binary_crossentropy_ssim_loss, \
     dice_binary_crossentropy_loss, dice_categorical_crossentropy_loss, dice_ssim_loss, \
     dice_ssim_binary_crossentropy_loss, dice_ssim_categorical_crossentropy_loss
-
+from .lovasz import binary_lovasz, categorical_lovasz
 
 losses_by_name = {
     "categorical_crossentropy": categorical_crossentropy_loss(),
@@ -18,6 +18,8 @@ losses_by_name = {
     "ssim": ssim_loss(),
     "dice": dice_loss(),
     "tversky": tversky_loss(),
+    # "binary_lovasz": binary_lovasz(),
+    "categorical_lovasz": categorical_lovasz(),
     "focal_tversky": focal_tversky_loss(),
     # combined losses
     "binary_crossentropy_ssim": binary_crossentropy_ssim_loss(),

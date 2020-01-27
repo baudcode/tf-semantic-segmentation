@@ -41,6 +41,7 @@ def serialize_example(image, mask, image_shape, num_classes):
     return example_proto.SerializeToString()
 
 
+@tf.function
 def read_tfrecord(serialized_example):
     feature_description = {
         'image': tf.io.FixedLenFeature((), tf.string),  # tf.float32, image between 0 and 1

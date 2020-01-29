@@ -58,6 +58,8 @@ def get_args(args=None):
                         help='choices: %s' % (list(metrics_by_name.keys())))
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float)
     parser.add_argument('-logdir', '--logdir', default=None)
+    parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
+
     parser.add_argument('-e', '--epochs', default=10, type=int)
     parser.add_argument('-bufsize', '--buffer_size', default=50, type=int)
     parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int)
@@ -121,9 +123,9 @@ def get_args(args=None):
 
     # tensorboard
     parser.add_argument('--no_tensorboard', action='store_true')
-    parser.add_argument('--tensorboard_train_images', action='store_true', help='show train images in tensorboard/wandb')
     parser.add_argument('--tensorboard_val_images', action='store_true', help='show val images in tensorboard/wandb')
     parser.add_argument('--tensorboard_test_images', action='store_true', help='show test images in tensorboard/wandb')
+    parser.add_argument('--tensorboard_train_images_update_batch_freq', type=int, default=-1, help='show train images every n batch images in tensorboard/wandb. If -1, no images will be logged')
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
     parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
@@ -174,10 +176,19 @@ def train_test_model(args, hparams=None, reporter=None):
         args.logdir = os.path.join("logs", "default", get_now_timestamp())
 
     logger.info("logdir: %s" % args.logdir)
+    if args.delete_logdir and os.path.isdir(args.logdir):
+        logger.warning("delting everything in logdir %s" % args.logdir)
+        shutil.rmtree(args.logdir)
+
     os.makedirs(args.logdir, exist_ok=True)
 
+    # write hyperparameters as text summary
+    with tf.summary.create_file_writer(os.path.join(args.logdir, 'train')).as_default():
+        hyperparameters = [tf.convert_to_tensor([k, str(v)]) for k, v in vars(args).items()]
+        tf.summary.text('hyperparameters', tf.stack(hyperparameters), step=0)
+
     if not args.no_tensorboard:
-        callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=False, profile_batch=0,
+        callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=True, profile_batch=0,
                                                 write_images=False, write_grads=True, update_freq=args.tensorboard_update_freq))
 
     if not args.no_terminate_on_nan:
@@ -274,10 +285,10 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if num_classes != 2 and args.final_activation == 'sigmoid':
         logger.error('do not choose sigmoid as the final activation when the dataset has more than 2 classes')
-        exit(0)
+        return {}
 
     if args.final_activation == 'sigmoid':
-        logger.warning('using only 1 class for sigmoid activation function to work')
+        logger.warning('using only 1 output channel for sigmoid activation function to work')
         num_classes = 1
 
     logger.info('strategy: %s' % str(strategy))
@@ -290,6 +301,7 @@ def train_test_model(args, hparams=None, reporter=None):
             if key not in valid_model_args:
                 raise Exception("invalid model args; cannot find key %s in %s for model of name %s" % (key, str(valid_model_args), args.model))
 
+    logger.info("creating model %s" % args.model)
     with strategy.scope():
         model_args = {'input_shape': input_shape, "num_classes": num_classes}
         model_args.update(args.model_args)
@@ -352,25 +364,25 @@ def train_test_model(args, hparams=None, reporter=None):
 
     # log images to tensorboard
     if not args.no_tensorboard:
-        if args.tensorboard_train_images:
+        if args.tensorboard_train_images_update_batch_freq > 0:
             train_ds_images = convert2tfdataset(ds, DataType.TRAIN) if args.train_on_generator else reader.get_dataset(DataType.TRAIN)
             train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-            train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            train_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
-                                                                            scaled_mask=scale_mask,
-                                                                            binary_threshold=args.binary_threshold,
-                                                                            update_freq=args.tensorboard_images_freq)
+            train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=10, shuffle=True, prefetch=False)
+            train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
+                                                                                 scaled_mask=scale_mask,
+                                                                                 binary_threshold=args.binary_threshold,
+                                                                                 update_freq=args.tensorboard_train_images_update_batch_freq)
             callbacks.append(train_prediction_callback)
-            train_prediction_callback.on_epoch_end(-1, {})
+            train_prediction_callback.on_batch_end(-1, {})
 
         if args.tensorboard_val_images:
             val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
             val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
             val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            val_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
-                                                                          scaled_mask=scale_mask,
-                                                                          binary_threshold=args.binary_threshold,
-                                                                          update_freq=args.tensorboard_images_freq)
+            val_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
+                                                                               scaled_mask=scale_mask,
+                                                                               binary_threshold=args.binary_threshold,
+                                                                               update_freq=args.tensorboard_images_freq)
             callbacks.append(val_prediction_callback)
             val_prediction_callback.on_epoch_end(-1, {})
 
@@ -378,10 +390,10 @@ def train_test_model(args, hparams=None, reporter=None):
             test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
             test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
             test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            test_prediction_callback = custom_callbacks.PredictionCallback(model, os.path.join(args.logdir, 'test'), val_ds_images,
-                                                                           scaled_mask=scale_mask,
-                                                                           binary_threshold=args.binary_threshold,
-                                                                           update_freq=args.tensorboard_images_freq)
+            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), val_ds_images,
+                                                                                scaled_mask=scale_mask,
+                                                                                binary_threshold=args.binary_threshold,
+                                                                                update_freq=args.tensorboard_images_freq)
             callbacks.append(test_prediction_callback)
             test_prediction_callback.on_epoch_end(-1, {})
 

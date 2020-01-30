@@ -13,9 +13,10 @@ cache: pip
 script:
   - python setup.py sdist bdist_wheel
   - python setup.py clean
-  - python setup.py install
   - travis_wait py.test  --cov-report term --cov=tf_semantic_segmentation
+  - python setup.py install
   - python setup.py clean
+  - pip uninstall -y tf_semantic_segmentation
 after_success:
   - codecov
 deploy:

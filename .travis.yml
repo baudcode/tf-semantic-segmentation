@@ -14,12 +14,9 @@ script:
   - python setup.py sdist bdist_wheel
   - python setup.py clean
   - python setup.py install
-  - travis_wait coverage run --source tf_semantic_segmentation -m py.test tests --doctest-modules
-    --pep8
+  - travis_wait py.test  --cov-report term --cov=tf_semantic_segmentation
   - python setup.py clean
 after_success:
-  - coverage xml
-  - coverage report -m
   - codecov
 deploy:
   provider: pypi

@@ -93,6 +93,9 @@ class CUB2002011(Dataset):
         image = imageio.imread(image_path)
 
         mask = imageio.imread(mask_path)
+        if len(mask.shape) > 2:
+            raise Exception("mask %s has invalid shape %s" % (mask_path, mask.shape))
+
         mask = (mask / 255.).astype(np.uint8)
 
         if self.mode == 'category':
@@ -103,10 +106,10 @@ class CUB2002011(Dataset):
     def raw(self):
         trainset = self._get_split(self.traindata, self.image_id_to_filename, self.image_id_to_class_id, self.images_dir, self.masks_dir)
         trainset, valset = get_split_from_list(trainset, split=0.95)
-
+        testset = self._get_split(self.testdata, self.image_id_to_filename, self.image_id_to_class_id, self.images_dir, self.masks_dir)
         return {
             DataType.TRAIN: trainset,
-            DataType.TEST: self._get_split(self.testdata, self.image_id_to_filename, self.image_id_to_class_id, self.images_dir, self.masks_dir),
+            DataType.TEST: testset,
             DataType.VAL: valset
         }
 

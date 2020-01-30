@@ -9,7 +9,7 @@ import time
 
 test_zip_url = "https://www.7-zip.org/a/7za920.zip"
 test_tar_url = "http://deb.debian.org/debian/pool/non-free/u/unrar-nonfree/unrar-nonfree_5.2.7.orig.tar.gz"
-test_rar_url = "https://dev-files.blender.org/file/download/tulqdbjvaqfiaub4uvqs/PHID-FILE-e3wy5kon7qfqwp37mfxt/test.rar"
+test_rar_url = "https://www.philippwinterberg.com/download/example.rar"
 test_image_url = 'https://homepages.cae.wisc.edu/~ece533/images/airplane.png'
 
 
@@ -88,12 +88,12 @@ def test_extract_tar(tar_file):
 def test_extract_rar(rar_file):
     destination = tempfile.mkdtemp()
     utils.extract(rar_file, destination, remove_archive_on_success=False)
-    assert(os.path.exists(os.path.join(destination, 'test.blend')))
+    assert(os.path.exists(os.path.join(destination, 'Fifteen_Feet_of_Time.pdf')))
     shutil.rmtree(destination)
 
     destination = tempfile.mkdtemp()
     utils.unrar(rar_file, destination)
-    assert(os.path.exists(os.path.join(destination, 'test.blend')))
+    assert(os.path.exists(os.path.join(destination, 'Fifteen_Feet_of_Time.pdf')))
     shutil.rmtree(destination)
 
 

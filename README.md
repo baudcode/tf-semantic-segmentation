@@ -32,6 +32,7 @@
 
   - Unet
   - Erfnet
+  - MultiResUnet
 
 - Losses:
 

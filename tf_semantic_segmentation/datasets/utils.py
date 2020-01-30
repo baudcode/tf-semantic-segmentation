@@ -71,7 +71,11 @@ def convert2tfdataset(dataset, data_type, randomize=True):
         data = dataset.raw()[data_type]
         for idx in indexes:
             example = data[idx]
-            image, mask = dataset.parse_example(example)
+            try:
+                image, mask = dataset.parse_example(example)
+            except Exception as e:
+                logger.warning("could not parse example %s, error: %s, skipping" % (str(example), str(e)))
+                continue
 
             shape = image.shape
 
@@ -80,6 +84,10 @@ def convert2tfdataset(dataset, data_type, randomize=True):
 
             if len(image.shape) == 2:
                 image = np.expand_dims(image, axis=-1)
+
+            if len(mask.shape) > 2:
+                logger.warning("mask of example %s has invalid shape: %s, skipping" % (str(example), str(mask.shape)))
+                continue
 
             yield image, mask, dataset.num_classes, shape
 

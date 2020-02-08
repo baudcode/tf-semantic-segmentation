@@ -6,7 +6,7 @@ import tensorflow as tf
 import os
 import tqdm
 import multiprocessing
-
+import numpy as np
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -82,6 +82,18 @@ class TFReader:
 
     def num_examples(self, data_type):
         return sum([1 for _ in self.get_dataset(data_type)])
+    
+    def num_examples_and_mean(self, data_type):
+        examples = 0
+        mean = []
+        for i, o, n in self.get_dataset(data_type):
+            i = i.numpy()
+            # channel wise mean
+            means = [i[:, :, dim].mean() for dim in range(i.shape[-1])]
+            mean.append(means)
+            examples += 1
+        return examples, np.mean(mean, axis=0)
+
 
     @property
     def size(self):

@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument('-v', '--video', help='video file', default=None)
     parser.add_argument('-r', '--record_dir', help='record dir', default=None)
     parser.add_argument('-o', '--output_dir', help='export predictions', default=None)
-    parser.add_argument('-stream', '--stream', help='as stream', action='store_true')
+    parser.add_argument('-ns', '--no_stream', help='show predictions as continous stream of images using opencv', action='store_true')
     parser.add_argument('-rdt', '--record_data_type', help='data type (train, test, val)', default=DataType.VAL,
                         choices=[DataType.TRAIN, DataType.TEST, DataType.VAL])
     parser.add_argument('-rm', '--resize_method', help='default: resize', type=str, default='resize')
@@ -45,7 +45,8 @@ def main():
     if args.record_dir is None and args.image is None and args.video is None:
         raise AssertionError("Please either specify an `image`, `video` or a `record_dir`")
 
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.output_dir:
+        os.makedirs(args.output_dir, exist_ok=True)
 
     logger.info("loading model")
     model = load_model(args.model_path, compile=False)
@@ -76,7 +77,7 @@ def main():
                                                                   num_classes,
                                                                   images=image_batch.copy(),
                                                                   binary_threshold=0.5)[0]
-            if not args.stream:
+            if args.no_stream:
                 show.show_images([image_batch[0], predictions_rgb, target_rgb], titles=['input', 'predictions', 'target'])
             else:
                 result = np.concatenate([(image_batch[0] * 255.).astype(np.uint8), predictions_rgb, target_rgb], axis=1)
@@ -119,7 +120,7 @@ def main():
     elif args.video:
         output_path = None if not args.output_dir else os.path.join(args.output_dir, "p-%s" % os.path.basename(args.video))
         logger.info("saving predictions to %s" % output_path)
-        predict_video(model, args.video, args.stream, output_path, args.resize_method)
+        predict_video(model, args.video, not args.no_stream, output_path, args.resize_method)
 
 
 if __name__ == "__main__":

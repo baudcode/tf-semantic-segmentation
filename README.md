@@ -280,10 +280,20 @@ python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5  -i image
 python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/camvid/
 ```
 
-- On TFRecord (with export to directory and as a stream)
+- On TFRecord (with export to directory)
 
 ```shell
-python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/cubbinary/ --stream -o out/ -rm 'resize_with_pad'
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/cubbinary/ -o out/ -rm 'resize_with_pad'
 ```
 
 - On Video
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -v video.mp4
+```
+
+- On Video (with export to out/p-video.mp4)
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -v video.mp4 -o out/
+```

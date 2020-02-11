@@ -268,6 +268,44 @@ docker build -t tf_semantic_segmentation -f docker/Dockerfile ./
 pip install matplotlib
 ```
 
+#### Using Code
+
+```python
+from tensorflow.keras.models import load_model
+import numpy as np
+from tf_semantic_segmentation.processing import dataset
+from tf_semantic_segmentation.visualizations import show, masks
+
+
+model = load_model('logs/model-best.h5', compile=False)
+
+# model parameters
+size = tuple(model.input.shape[1:3])
+depth = model.input.shape[-1]
+color_mode = dataset.ColorMode.GRAY if depth == 1 else dataset.ColorMode.RGB
+
+# define an image
+image = np.zeros((256, 256, 3), np.uint8)
+
+# preprocessing
+image = image.astype(np.float32) / 255.
+image, _ = dataset.resize_and_change_color(image, None, size, color_mode, resize_method='resize')
+
+image_batch = np.expand_dims(image, axis=0)
+
+# predict (returns probabilities)
+p = model.predict(image_batch)
+
+# draw segmentation map
+num_classes = p.shape[-1] if p.shape[-1] > 1 else 2
+predictions_rgb = masks.get_colored_segmentation_mask(p, num_classes, images=image_batch, binary_threshold=0.5)
+
+# show images using matplotlib
+show.show_images([predictions_rgb[0], image_batch[0]])
+```
+
+#### Using scripts
+
 - On image
 
 ```shell

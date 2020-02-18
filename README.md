@@ -153,12 +153,12 @@ from tf_semantic_segmentation import models
 # print all available models
 print(list(modes.models_by_name.keys()))
 
-# returns a model without the final activation function
+# returns a model (without the final activation function) and the base model without the top layer
 # because the activation function depends on the loss function
-model = models.get_model_by_name('erfnet', {"input_shape": (128, 128, 3), "num_classes": 5})
+model, base_model = models.get_model_by_name('erfnet', {"input_shape": (128, 128, 3), "num_classes": 5})
 
 # call models directly
-model = models.erfnet(input_shape=(128, 128), num_classes=5)
+model, base_model = models.erfnet(input_shape=(128, 128), num_classes=5)
 ```
 
 ## Use your own dataset

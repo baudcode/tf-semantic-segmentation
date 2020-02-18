@@ -19,6 +19,8 @@
   - Taco
   - Shapes (randomly creating triangles, rectangles and circles)
   - Toy (Overlaying TinyImageNet with MNIST)
+  - ISIC2018
+  - CVC-ClinicDB
 
 - Distributed Training on Multiple GPUs
 - Hyper Parameter Optimization using WandB
@@ -30,6 +32,7 @@
 
   - Unet
   - Erfnet
+  - MultiResUnet
 
 - Losses:
 
@@ -80,27 +83,35 @@ pip install tensorflow-addons==0.7.0 --upgrade
 
 ## Training
 
+### Hint: To see train/test/val images you have to start tensorboard like this
+
+```bash
+tensorboard --logdir=logs/ --reload_multifile=true
+```
+
 ### On inbuild datasets (generator)
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
     -logdir 'logs/taco-binary-test' -o 'adam' -lr 5e-3 --size 256,256 \
     -l 'binary_crossentropy' -fa 'sigmoid' \
-    --train_on_generator --gpus='0'
+    --train_on_generator --gpus='0' \
+    --tensorboard_train_images --tensorboard_val_images
 ```
 
 ### Using a fixed record path
 
 ```bash
-python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscapes/records/cityscapes-512x256-rgb/ \
+python -m tf_semantic_segmentation.bin.train --record_dir=records/cityscapes-512x256-rgb/ \
     -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'adam' -lr 1e-4 -l 'categorical_crossentropy' \
-    -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish'
+    -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0' -a 'mish' \
+    --tensorboard_train_images --tensorboard_val_images
 ```
 
 ### Multi GPU training
 
 ```bash
-python -m tf_semantic_segmentation.bin.train --record_dir=/hdd/datasets/cityscapes/records/cityscapes-512x256-rgb/ \
+python -m tf_semantic_segmentation.bin.train --record_dir=records/cityscapes-512x256-rgb/ \
     -bs 4 -e 100 -logdir 'logs/cityscapes-bs8-e100-512x256' -o 'adam' -lr 1e-4 -l 'categorical_crossentropy' \
     -fa 'softmax' -bufsize 50 --metrics='iou_score,f1_score' -m 'erfnet' --gpus='0,1,2,3' -a 'mish'
 ```
@@ -257,6 +268,44 @@ docker build -t tf_semantic_segmentation -f docker/Dockerfile ./
 pip install matplotlib
 ```
 
+#### Using Code
+
+```python
+from tensorflow.keras.models import load_model
+import numpy as np
+from tf_semantic_segmentation.processing import dataset
+from tf_semantic_segmentation.visualizations import show, masks
+
+
+model = load_model('logs/model-best.h5', compile=False)
+
+# model parameters
+size = tuple(model.input.shape[1:3])
+depth = model.input.shape[-1]
+color_mode = dataset.ColorMode.GRAY if depth == 1 else dataset.ColorMode.RGB
+
+# define an image
+image = np.zeros((256, 256, 3), np.uint8)
+
+# preprocessing
+image = image.astype(np.float32) / 255.
+image, _ = dataset.resize_and_change_color(image, None, size, color_mode, resize_method='resize')
+
+image_batch = np.expand_dims(image, axis=0)
+
+# predict (returns probabilities)
+p = model.predict(image_batch)
+
+# draw segmentation map
+num_classes = p.shape[-1] if p.shape[-1] > 1 else 2
+predictions_rgb = masks.get_colored_segmentation_mask(p, num_classes, images=image_batch, binary_threshold=0.5)
+
+# show images using matplotlib
+show.show_images([predictions_rgb[0], image_batch[0]])
+```
+
+#### Using scripts
+
 - On image
 
 ```shell
@@ -267,4 +316,22 @@ python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5  -i image
 
 ```shell
 python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/camvid/
+```
+
+- On TFRecord (with export to directory)
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -r records/cubbinary/ -o out/ -rm 'resize_with_pad'
+```
+
+- On Video
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -v video.mp4
+```
+
+- On Video (with export to out/p-video.mp4)
+
+```shell
+python -m tf_semantic_segmentation.evaluation.predict -m model-best.h5 -v video.mp4 -o out/
 ```

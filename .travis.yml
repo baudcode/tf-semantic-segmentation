@@ -3,7 +3,7 @@ sudo: required
 python:
   - 3.7
 before_install:
-  - sudo apt-get install -y libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
+  - sudo apt-get install -y libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev unrar tar zip
 install:
   - pip install --upgrade pip
   - pip install --upgrade setuptools
@@ -13,13 +13,11 @@ cache: pip
 script:
   - python setup.py sdist bdist_wheel
   - python setup.py clean
+  - travis_wait py.test  --cov-report term --cov=tf_semantic_segmentation
   - python setup.py install
-  - travis_wait coverage run --source tf_semantic_segmentation -m py.test tests --doctest-modules
-    --pep8
   - python setup.py clean
+  - pip uninstall -y tf_semantic_segmentation
 after_success:
-  - coverage xml
-  - coverage report -m
   - codecov
 deploy:
   provider: pypi

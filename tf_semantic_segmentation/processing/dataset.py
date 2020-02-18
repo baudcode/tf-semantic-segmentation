@@ -4,12 +4,29 @@ import tensorflow as tf
 import numpy as np
 import multiprocessing
 
+resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
+
 
 def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad'):
-    if color_mode == ColorMode.RGB and image.shape[-1] == 1:
+    """
+    Arguments:
+
+    - image: 3d or 4d tensor
+    - mask: 2d, 3d tensor or None
+    - size: new_height, new_width
+    - color_mode: ColorMode
+    - resize_method: how to resize the images, options: 'resize', 'resize_with_pad', 'resize_with_crop_or_pad'
+
+    Returns:
+    tuple (image, mask)
+    """
+    if len(tf.shape(image)) == 2:
+        image = tf.expand_dims(image, axis=-1)
+
+    if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
         image = tf.image.grayscale_to_rgb(image)
 
-    elif color_mode == ColorMode.GRAY and image.shape[-1] != 1:
+    elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
         image = tf.image.rgb_to_grayscale(image)
 
     if size is not None:
@@ -19,19 +36,19 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
 
         # augmentatations
         if resize_method == 'resize':
-            image = tf.image.resize(image, size[::-1], antialias=True)
+            image = tf.image.resize(image, size, antialias=True)
             if mask is not None:
-                mask = tf.image.resize(mask, size[::-1], method='nearest')  # use nearest for no interpolation
+                mask = tf.image.resize(mask, size, method='nearest')  # use nearest for no interpolation
 
         elif resize_method == 'resize_with_pad':
-            image = tf.image.resize_with_pad(image, size[1], size[0], antialias=True)
+            image = tf.image.resize_with_pad(image, size[0], size[1], antialias=True)
             if mask is not None:
-                mask = tf.image.resize_with_pad(mask, size[1], size[0], method='nearest')  # use nearest for no interpolation
+                mask = tf.image.resize_with_pad(mask, size[0], size[1], method='nearest')  # use nearest for no interpolation
 
         elif resize_method == 'resize_with_crop_or_pad':
-            image = tf.image.resize_with_crop_or_pad(image, size[1], size[0])
+            image = tf.image.resize_with_crop_or_pad(image, size[0], size[1])
             if mask is not None:
-                mask = tf.image.resize_with_crop_or_pad(mask, size[1], size[0])  # use nearest for no interpolation
+                mask = tf.image.resize_with_crop_or_pad(mask, size[0], size[1])  # use nearest for no interpolation
         else:
             raise Exception("unknown resize method %s" % resize_method)
 
@@ -42,8 +59,9 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, is_training=True):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
 
+    @tf.function
     def map_fn(image, mask, num_classes):
 
         # scale between 0 and 1
@@ -51,7 +69,6 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, is_trai
 
         # resize method for image create float32 image anyway
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method)
-
         if scale_mask:
             num_classes = tf.cast(num_classes, tf.float32)
             mask = tf.cast(mask, tf.float32)

@@ -51,7 +51,7 @@ class Ade20k(Dataset):
 
 
 if __name__ == "__main__":
+
+    from .utils import test_dataset
     ade20k = Ade20k('/hdd/datasets/ade20k')
-    for image, target in ade20k.get()():
-        print(image.shape, target.shape, target.max())
-        pass
+    test_dataset(ade20k)

@@ -1,4 +1,5 @@
-from ..utils import get_files, download_from_google_drive, download_and_extract
+from .. import utils
+from ..settings import logger
 
 import random
 import imageio
@@ -53,27 +54,11 @@ def get_split_from_list(l, split=0.9):
 
 
 def get_split_from_dirs(images_dir, masks_dir, extensions=['png'], train_split=0.8, val_split=0.5, shuffle=True, rand=lambda: 0.2):
-    images = get_files(images_dir, extensions=extensions)
-    masks = get_files(masks_dir, extensions=extensions)
+    images = utils.get_files(images_dir, extensions=extensions)
+    masks = utils.get_files(masks_dir, extensions=extensions)
 
     trainset = list(zip(images, masks))
     return get_split(trainset, train_split=train_split, val_split=val_split, shuffle=shuffle, rand=rand)
-
-
-def image_generator(data, color_map=None):
-    import numpy as np
-
-    def gen():
-        for image_path, mask_path in data:
-            mask = imageio.imread(mask_path)[:, :, :3]
-            mask_idx = np.array(mask.shape, np.uint8)
-            for color, value in color_map.items():
-                mask_idx[mask == np.asarray(
-                    [color.r, color.g, color.b])] = [value, value, value]
-
-            mask_idx = mask_idx.mean(axis=-1)
-            yield imageio.imread(image_path), mask_idx
-    return gen
 
 
 def convert2tfdataset(dataset, data_type, randomize=True):
@@ -86,7 +71,11 @@ def convert2tfdataset(dataset, data_type, randomize=True):
         data = dataset.raw()[data_type]
         for idx in indexes:
             example = data[idx]
-            image, mask = dataset.parse_example(example)
+            try:
+                image, mask = dataset.parse_example(example)
+            except Exception as e:
+                logger.warning("could not parse example %s, error: %s, skipping" % (str(example), str(e)))
+                continue
 
             shape = image.shape
 
@@ -95,6 +84,10 @@ def convert2tfdataset(dataset, data_type, randomize=True):
 
             if len(image.shape) == 2:
                 image = np.expand_dims(image, axis=-1)
+
+            if len(mask.shape) > 2:
+                logger.warning("mask of example %s has invalid shape: %s, skipping" % (str(example), str(mask.shape)))
+                continue
 
             yield image, mask, dataset.num_classes, shape
 
@@ -117,6 +110,18 @@ def download_records(tag, destination_dir):
         drive_url = google_drive_records_by_tag[tag]
         drive_id = drive_url.split("/")[-2]
         print("download and extract ", drive_id, tag, destination_dir)
-        download_and_extract(('%s.zip' % tag, drive_id), destination_dir, chk_exists=False)
+        utils.download_and_extract(('%s.zip' % tag, drive_id), destination_dir, chk_exists=False)
     else:
         raise Exception("cannot download records of tag %s, please use one of %s" % (tag, str(google_drive_records_by_tag.keys())))
+
+
+def test_dataset(ds):
+    logger.debug("testing dataset %s" % ds.__class__.__name__)
+    for data_type in DataType.get():
+        logger.debug("using data_type %s" % data_type)
+        tfds = convert2tfdataset(ds, data_type)
+
+        for image, mask, num_classes in tfds:
+            logger.debug("image shape: %s, %s |  mask shape: %s, %s, %d (max) | num_classes: %d" % (image.shape, image.dtype, mask.shape, mask.dtype, mask.numpy().max(), num_classes))
+            break
+    return image.numpy(), mask.numpy(), num_classes.numpy()

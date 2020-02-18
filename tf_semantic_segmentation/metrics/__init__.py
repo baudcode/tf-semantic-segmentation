@@ -4,7 +4,7 @@ from .precision import precision
 from .recall import recall
 from .psnr import psnr
 from .ssim import ssim
-from . import kmetrics
+from .kmetrics import binary_accuracy, categorical_accuracy, mae
 
 
 metrics_by_name = {
@@ -15,12 +15,9 @@ metrics_by_name = {
     "iou_score": iou_score(),
     "psnr": psnr(),
     "ssim": ssim(),
-    "mae": kmetrics.mae,
-    "binary_accuracy": kmetrics.binary_accuracy,
-    "categorical_accuracy": kmetrics.categorical_accuracy,
-    "top_5_categorical_accuracy": kmetrics.top_5_categorical_accuracy,
-    "top_3_categorical_accuracy": kmetrics.top_3_categorical_accuracy,
-    "top_1_categorical_accuracy": kmetrics.top_1_categorical_accuracy
+    "mae": mae,
+    "binary_accuracy": binary_accuracy,
+    "categorical_accuracy": categorical_accuracy
 }
 
 

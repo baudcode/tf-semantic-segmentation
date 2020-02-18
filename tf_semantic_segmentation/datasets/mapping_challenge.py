@@ -1,6 +1,5 @@
 from .dataset import Dataset, DataType
-from .utils import get_files
-from ..utils import download_and_extract
+from ..utils import download_and_extract, get_files
 from ..visualizations import masks, show
 
 import os

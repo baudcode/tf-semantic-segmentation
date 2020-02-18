@@ -82,3 +82,6 @@ client_secrets.json
 experimental/
 .local/
 .keras/
+records/**
+gt/**
+pets/**

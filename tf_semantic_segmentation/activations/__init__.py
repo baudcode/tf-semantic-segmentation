@@ -1,6 +1,7 @@
 from tensorflow.keras import backend as K
 from tensorflow.keras.utils import get_custom_objects
 from tensorflow.keras.layers import Activation
+import tensorflow as tf
 
 
 class Mish(Activation):
@@ -24,7 +25,15 @@ class Swish(Activation):
         self.__name__ = "Switch"
 
 
-custom_objects = {'relu6': ReLU6(), 'mish': Mish(), 'swish': Swish()}
+class LeakyReLU(Activation):
+
+    def __init__(self, alpha=0.2, **kwargs):
+
+        super(LeakyReLU, self).__init__(lambda x: tf.nn.leaky_relu(x, alpha=alpha), **kwargs)
+        self.__name__ = "LeakyReLU"
+
+
+custom_objects = {'relu6': ReLU6(), 'mish': Mish(), 'swish': Swish(), 'leaky_relu': LeakyReLU()}
 get_custom_objects().update(custom_objects)
 
 __all__ = ['Mish', "ReLU6", "Swish"]

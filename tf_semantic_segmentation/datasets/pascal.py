@@ -1,6 +1,6 @@
 import numpy as np
 
-from .utils import DataType, get_split_from_list, image_generator, Color
+from .utils import DataType, get_split_from_list, Color
 from ..utils import download_and_extract, extract_tar
 from .dataset import Dataset
 
@@ -221,16 +221,6 @@ class PascalVOC2012(Dataset):
             mask_idx[idxs] = class_idx
 
         return imageio.imread(image_path), mask_idx
-
-    def get(self, data_type=DataType.TRAIN):
-
-        data = self.raw()[data_type]
-
-        def gen():
-            for image_path, mask_path, xml_path in data:
-                yield self.parse_example((image_path, mask_path, xml_path))
-
-        return gen
 
 
 if __name__ == "__main__":

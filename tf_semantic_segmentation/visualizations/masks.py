@@ -49,6 +49,9 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
 
     predictions: ndarray - BHWC (if C=1 - np.float32 else np.uint8) probabilities
     num_classes: int - number of classes
+    images: ndarray - float32 (0..1) or uint8 (0..255)
+    binary_threshold: float - when predicting only 1 value, threshold to set label to 1
+    alpha: float - overlay percentage
     """
     predictions = predictions.copy()
     colors = get_colors(num_classes)
@@ -59,7 +62,7 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
     else:
         images = images.copy()
 
-        if images.dtype == "float32":
+        if images.dtype == "float32" or images.dtype == 'float64':
             images = (images * 255).astype(np.uint8)
 
         if images.shape[-1] == 1:

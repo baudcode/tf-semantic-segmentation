@@ -1,32 +1,12 @@
-from tf_semantic_segmentation import datasets
-from tf_semantic_segmentation.datasets import tfrecord
-from tf_semantic_segmentation.datasets.utils import DataType
+from tf_semantic_segmentation.datasets import tfrecord, DataType
+from ..fixtures import dataset
 
 import os
 import tempfile
 import numpy as np
 import pytest
 import time
-
-
-@pytest.fixture()
-def ds():
-    """ Returns the dataset fixture """
-    return datasets.shapes.ShapesDS(os.path.join(tempfile.tempdir, 'SHAPES'), num_examples=100)
-
-
-def test_toy_dataset(ds):
-
-    gen = ds.get()
-    inputs, targets = next(gen())
-    assert(len(targets.shape) == 2)
-    assert(targets.shape[:2] == inputs.shape[:2])
-    assert(targets.dtype == np.uint8)
-    assert(inputs.dtype == np.uint8)
-
-    assert(ds.num_examples(DataType.TRAIN) == 80)
-    assert(ds.num_examples(DataType.TEST) == 10)
-    assert(ds.num_examples(DataType.VAL) == 10)
+import shutil
 
 
 def write_and_read_records(ds, options):
@@ -47,11 +27,12 @@ def write_and_read_records(ds, options):
     assert(reader.num_examples(DataType.TRAIN) == writer.num_written(DataType.TRAIN))
     assert(reader.num_examples(DataType.TEST) == writer.num_written(DataType.TEST))
     assert(reader.num_examples(DataType.VAL) == writer.num_written(DataType.VAL))
+    shutil.rmtree(record_dir)
 
 
-def test_write_and_read_records_no_compression(ds):
-    write_and_read_records(ds, "")
+def test_write_and_read_records_no_compression(dataset):
+    write_and_read_records(dataset, "")
 
 
-def test_write_and_read_records_gzip_compression(ds):
-    write_and_read_records(ds, "GZIP")
+def test_write_and_read_records_gzip_compression(dataset):
+    write_and_read_records(dataset, "GZIP")

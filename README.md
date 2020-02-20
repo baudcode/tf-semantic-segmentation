@@ -390,6 +390,21 @@ python -m tf_semantic_segmentation.bin.model_server_config_writer -d models/ -c 
 tensorflow_model_server --model_config_file=models.yaml --rest_api_port=8501
 ```
 
+### **Compare models**
+
+```bash
+python -m tf_semantic_segmentation.evaluation.compare_models -i logs/ -c 'taco' -data /hdd/datasets/ -d 'tacobinary'
+```
+
+Parameters:
+
+- _-i_ (directory containing models)
+- _-c_ (model name (directory name) must contain this value)
+- _-data_ (data directory)
+- _-d_ (dataset name)
+
+Use **--help** to get more help
+
 #### Using Code
 
 ```python

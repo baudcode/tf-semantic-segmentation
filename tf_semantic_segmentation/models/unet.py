@@ -90,43 +90,6 @@ def unet(input_shape=(256, 256, 1), num_classes=3, depth=5, activation='relu', n
     return Model(inputs, y), base_model
 
 
-def unet_v2(input_shape=(256, 256, 1), num_classes=3, activation='relu', upsampling_method='bilinear',
-            downsampling_method='max_pool', depth=5, num_first_filters=32, l2=None):
-    """
-    Modified version of the original unet with more convolutions and bilinear upsampling
-    """
-    logger.debug("building model unet_v2 with args %s" % (str(locals())))
-    inputs = Input(input_shape)
-
-    y = inputs
-    layers = []
-
-    features = [int(pow(2, math.log2(num_first_filters) + i)) for i in range(depth)]
-
-    for k, f in enumerate(features):
-        logger.debug("encoder k=%d, features=%d" % (k, f))
-        y = conv(y, f, activation=activation, l2=l2)
-        y = conv(y, f, activation=activation, l2=l2)
-        layers.append(y)
-        if k != (len(features) - 1):
-            y = downsample(y, method=downsampling_method, activation=activation, l2=l2)
-
-    for k, f in enumerate(reversed(features[:-1])):
-        logger.debug('decoder: k=%d, features=%d' % (k, f))
-        y = upsample(y, method=upsampling_method, activation=activation, l2=l2)
-        y = conv(y, f, kernel_size=(1, 1), norm=None, activation=activation, l2=l2)
-        y = K.concatenate([layers[-(k + 2)], y])
-        y = conv(y, f, norm=None, activation=activation, l2=l2)
-        y = conv(y, f, activation=activation, l2=l2)
-
-    y = conv(y, features[0], norm=False, activation=activation, l2=l2)
-    y = conv(y, features[0], norm=False, activation=activation, l2=l2)
-
-    base_model = Model(inputs, y)
-    y = conv(y, num_classes, kernel_size=(1, 1), activation=None, norm=None)
-    return Model(inputs, y), base_model
-
-
 if __name__ == "__main__":
     from ..activations import *
     import logging
@@ -138,9 +101,9 @@ if __name__ == "__main__":
 
     print(unet(upsampling_method='bilinear', downsampling_method='conv')[0].count_params())
     for upsample_method in ['subpixel', 'bilinear', 'conv', 'nearest']:
-        model, _ = unet_v2(upsampling_method=upsample_method, downsampling_method='conv', activation='mish')
+        model, _ = unet(upsampling_method=upsample_method, downsampling_method='conv', activation='mish')
         print("params: ", model.count_params(), 'upsample method: ', upsample_method)
 
     for downsample_method in ['max_pool', 'avg_pool', 'conv']:
-        model, _ = unet_v2(upsampling_method='bilinear', downsampling_method=downsample_method, activation='mish')
+        model, _ = unet(upsampling_method='bilinear', downsampling_method=downsample_method, activation='mish')
         print("params: ", model.count_params(), 'downsample method: ', downsample_method)

@@ -21,9 +21,9 @@ def conv_block_simple_no_bn(prevlayer, filters, prefix, strides=(1, 1), activati
     return conv
 
 
-def unet_resnet(input_shape=(256, 256, 3), num_classes=8):
+def unet_resnet(input_shape=(256, 256, 3), num_classes=8, encoder_weights='imagenet'):
 
-    base_model = resnet50.ResNet50(input_shape=input_shape, include_top=False)
+    base_model = resnet50.ResNet50(input_shape=input_shape, include_top=False, weights=encoder_weights)
 
     for l in base_model.layers:
         l.trainable = True
@@ -73,8 +73,8 @@ def unet_resnet(input_shape=(256, 256, 3), num_classes=8):
     return model, Model(base_model.input, conv10)
 
 
-def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3):
-    base_model = mobilenet.MobileNet(include_top=False, input_shape=input_shape)
+def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='imagenet'):
+    base_model = mobilenet.MobileNet(include_top=False, input_shape=input_shape, weights=encoder_weights)
 
     conv1 = base_model.get_layer('conv_pw_1_relu').output
     conv2 = base_model.get_layer('conv_pw_3_relu').output
@@ -108,8 +108,8 @@ def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3):
     return model, Model(base_model.input, conv10)
 
 
-def unet_inception_resnet_v2(input_shape=(256, 256, 3), num_classes=6):
-    base_model = inception.InceptionResNetV2(include_top=False, input_shape=input_shape)
+def unet_inception_resnet_v2(input_shape=(256, 256, 3), num_classes=6, encoder_weights='imagenet'):
+    base_model = inception.InceptionResNetV2(include_top=False, input_shape=input_shape, weights=encoder_weights)
 
     conv0 = base_model.get_layer('activation_2').output  # activation_2 (None, 512, 512, 64)
     conv1 = base_model.get_layer('activation_3').output  # activation_3 (None, 256, 256, 80)

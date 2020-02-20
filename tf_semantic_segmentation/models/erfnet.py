@@ -1,4 +1,5 @@
 from ..layers import get_norm_by_name
+from ..settings import logger
 
 from tensorflow.keras.models import Model
 from tensorflow.keras import layers
@@ -13,7 +14,7 @@ def conv(x, filters, kernel_size, strides=1, norm='batch', activation='relu', l2
         output_shape[0] = int(output_shape[0] * strides)
         output_shape[1] = int(output_shape[1] * strides)
         output_shape[2] = filters
-        print(output_shape)
+        logger.debug(str(output_shape))
 
         y = layers.Conv2DTranspose(filters, kernel_size, strides=strides, padding='SAME', activation=activation,
                                    dilation_rate=rate, kernel_regularizer=regularizers.l2(l2) if l2 else None)(x)
@@ -32,7 +33,7 @@ def conv(x, filters, kernel_size, strides=1, norm='batch', activation='relu', l2
 
 
 def factorized_module(x, dropout=0.3, dilation=[1, 1], l2=None):
-    print("factorized: ", locals())
+    logger.debug("factorized: %s" % str(locals()))
     n = K.int_shape(x)[-1]
     y = conv(x, n, [3, 1], rate=dilation[0], norm=None, l2=l2)
     y = conv(y, n, [1, 3], rate=dilation[0], l2=l2)
@@ -44,7 +45,7 @@ def factorized_module(x, dropout=0.3, dilation=[1, 1], l2=None):
 
 
 def downsample(x, n, activation='relu', norm=None, l2=None):
-    print('downsample: ', locals())
+    logger.debug('downsample: %s' % str(locals()))
     f_in = int(K.int_shape(x)[-1])
     f_conv = int(n - f_in)
     branch_1 = conv(x, f_conv, 3, strides=2, l2=l2)
@@ -70,7 +71,7 @@ def erfnet(input_shape=(256, 256, 1), num_classes=3, l2=None):
         for i in range(4):
             y = factorized_module(y, dilation=[1, pow(2, i + 1)], l2=l2)
 
-    print("upsample me...")
+    logger.debug("upsampling...")
     y = upsample(y, 64)
     for i in range(2):
         y = factorized_module(y, dilation=[1, 1], l2=l2)

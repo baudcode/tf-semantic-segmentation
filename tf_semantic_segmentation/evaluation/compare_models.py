@@ -10,7 +10,7 @@ from ..datasets import get_dataset_by_name, get_cache_dir
 from ..datasets.utils import convert2tfdataset, DataType
 from ..processing.dataset import get_preprocess_fn, ColorMode
 from ..visualizations import show
-from ..serving import predict, predict_on_batch, get_models_from_directory, ensamble_inference, retrieve_metadata
+from ..serving import predict, predict_on_batch, get_models_from_directory, ensemble_inference, retrieve_metadata
 
 
 def get_args():
@@ -30,7 +30,7 @@ def get_args():
     return parser.parse_args()
 
 
-def compare_models(models, image, mask, num_classes, host='localhost', port=8501, threshold=0.5, metric='iou_score'):
+def compare_models(models, image, mask, num_classes, host='localhost', port=8501, threshold=0.5, metric='iou_score', num_per_row=4):
 
     metric = get_metric_by_name(metric)
 
@@ -42,15 +42,15 @@ def compare_models(models, image, mask, num_classes, host='localhost', port=8501
         mask = tf.expand_dims(mask, axis=-1)
         return metric(mask, p)
 
-    ensamble, predictions = ensamble_inference(models, image, host=host, port=port, threshold=threshold)
+    ensemble, predictions = ensemble_inference(models, image, host=host, port=port, threshold=threshold)
     model_scores = [get_score(mask, p) for p in predictions]
     model_titles = ["%s (IoU: %.3f)" % (m['name'], model_scores[k]) for k, m in enumerate(models)]
 
-    ensamble_score = get_score(mask, ensamble.astype(np.uint8))
+    ensemble_score = get_score(mask, ensemble.astype(np.uint8))
 
-    titles = ['input'] + model_titles + ['ensamble (IoU: %.3f)' % ensamble_score] + ['target']
-    images = [image] + predictions + [ensamble] + [mask.astype(np.float32)]
-    show.show_images(images, titles=titles, cols=len(titles) // args.num_per_row)
+    titles = ['input'] + model_titles + ['ensemble (IoU: %.3f)' % ensemble_score] + ['target']
+    images = [image] + predictions + [ensemble] + [mask.astype(np.float32)]
+    show.show_images(images, titles=titles, cols=len(titles) // num_per_row)
 
 
 def main():
@@ -88,7 +88,8 @@ def main():
     ds = ds.map(get_preprocess_fn(size, color_mode, args.resize_method, scale_mask=scale_mask))
 
     for image, mask in ds:
-        compare_models(models, image.numpy(), mask.numpy(), num_classes, host=args.host, port=args.port, threshold=args.threshold, metric=args.metric)
+        compare_models(models, image.numpy(), mask.numpy(), num_classes, host=args.host, port=args.port, threshold=args.threshold,
+                       metric=args.metric, num_per_row=args.num_per_row)
 
 
 if __name__ == "__main__":

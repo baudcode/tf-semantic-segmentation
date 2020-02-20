@@ -27,6 +27,7 @@
 - WandB Integration
 - Easily create TFRecord from Directory
 - Tensorboard visualizations
+- Ensemble inference
 
 - Models:
 
@@ -390,7 +391,7 @@ python -m tf_semantic_segmentation.bin.model_server_config_writer -d models/ -c 
 tensorflow_model_server --model_config_file=models.yaml --rest_api_port=8501
 ```
 
-### **Compare models**
+### **Compare models and ensemnble**
 
 ```bash
 python -m tf_semantic_segmentation.evaluation.compare_models -i logs/ -c 'taco' -data /hdd/datasets/ -d 'tacobinary'

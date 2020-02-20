@@ -1,13 +1,43 @@
 from __future__ import print_function
 
 from .utils import get_random_image
+from .settings import logger
+
 import requests
 import numpy as np
 import json
+import os
+from pprint import pprint
 
 
-def predict(image, host='localhost', model_name='default', input_name='inputs', port=8501):
-    server_url = "http://%s:%d/v0/models/%s:predict" % (host, port, model_name)
+def retrieve_metadata(model_name, host='localhost', port=8501, signature_def='serving_default'):
+    server_url = "http://%s:%d/v1/models/%s/metadata" % (host, port, model_name)
+    data = requests.get(server_url).json()
+    inputs_metadata = data['metadata']['signature_def']['signature_def'][signature_def]['inputs']
+    outputs_metadata = data['metadata']['signature_def']['signature_def'][signature_def]['outputs']
+
+    inputs = {}
+    for key, input_data in inputs_metadata.items():
+        shape = [dim['size'] for dim in input_data['tensor_shape']['dim']]
+        inputs[key] = {}
+        inputs[key]['shape'] = shape
+        inputs[key]['dtype'] = input_data['dtype']
+
+    outputs = {}
+    for key, output_data in outputs_metadata.items():
+        shape = [dim['size'] for dim in output_data['tensor_shape']['dim']]
+        outputs[key] = {}
+        outputs[key]['shape'] = shape
+        outputs[key]['dtype'] = output_data['dtype']
+
+    return {"inputs": inputs, "outputs": outputs}
+
+
+def predict(image, host='localhost', model_name='default', input_name='inputs', version=0, port=8501):
+    if version > 0:
+        server_url = "http://%s:%d/v1/models/%s/version/%d:predict" % (host, port, model_name, version)
+    else:
+        server_url = "http://%s:%d/v1/models/%s:predict" % (host, port, model_name)
 
     # Compose a JSON Predict request (send JPEG image in base64).
 
@@ -63,5 +93,93 @@ def calculate_average_latency(size=(256, 256), host='localhost', port=8501, inpu
     print('Avg latency: {} ms'.format((total_time * 1000) / num_requests))
 
 
+def write_model_config(models, model_config_path):
+    """
+        Schema:
+        model_config_list {
+        config {
+            name: 'my_first_model'
+            base_path: '/tmp/my_first_model/'
+            model_platform: 'tensorflow'
+        }
+        config {
+            name: 'my_second_model'
+            base_path: '/tmp/my_second_model/'
+            model_platform: 'tensorflow'
+        }
+        }
+    """
+    config = "model_config_list {\n"
+    for model in models:
+        config += "config {\n\tname: '%s'\n\tbase_path: '%s'\n\tmodel_platform: 'tensorflow'\n}\n" % (model["name"], os.path.abspath(model['path']))
+    config += "}"
+    with open(model_config_path, 'w') as writer:
+        writer.write(config)
+
+
+def get_models_from_directory(directory, contains=None):
+    models = []
+
+    for logdir in os.listdir(directory):
+        if not contains or contains in logdir:
+            model_path = os.path.join(directory, logdir, 'saved_model')
+            if os.path.exists(model_path):
+                logger.info("adding model %s" % logdir)
+                models.append({
+                    "path": model_path,
+                    "name": str(len(models))
+                })
+            else:
+                logger.warning("skipping model %s, because saved model does not exist" % logdir)
+    return models
+
+
+def write_model_config_from_models_dir(models_dir, contains=None, config_path='models.yaml'):
+
+    models = get_models_from_directory(models_dir, contains=contains)
+    logger.info("found %d models" % len(models))
+    logger.info("written tensorflow model server config to %s" % config_path)
+    write_model_config(models, config_path)
+    return models
+
+
+def threshold_predictions(p, threshold=0.5):
+    p[p >= threshold] = 1.0
+    p[p < threshold] = 0.0
+    return p
+
+
+def ensamble_prediction(models, image, host="localhost", port=8501):
+
+    predictions = []
+
+    for model in models:
+        version = model['version'] if "version" in model else 0
+        input_name = model["input_name"] if "input_name" in model else "input_1"
+        p = predict(image, host=host, model_name=model['name'], port=port, input_name=input_name, version=version)
+        predictions.append(np.asarray(p))
+
+    ensamble = np.mean(predictions, axis=0)
+    return ensamble, predictions
+
+
+def ensamble_inference(models, image, host="localhost", port=8501, threshold=0.5):
+
+    ensamble, predictions = ensamble_prediction(models, image, host=host, port=port)
+
+    if ensamble.shape[-1] == 1 and threshold > 0:
+        ensamble = threshold_predictions(ensamble, threshold=threshold)
+    elif ensamble.shape[-1] > 1:
+        ensamble = np.expand_dims(np.argmax(ensamble, axis=-1), axis=-1)
+
+    if ensamble.shape[-1] == 1 and threshold > 0:
+        predictions = [threshold_predictions(p, threshold=threshold) for p in predictions]
+    elif ensamble.shape[-1] > 1:
+        predictions = [np.expand_dims(np.argmax(p, axis=-1), axis=-1) for p in predictions]
+
+    return ensamble, predictions
+
+
 if __name__ == '__main__':
-    calculate_average_latency()
+    # calculate_average_latency()
+    print(retrieve_metadata('0'))

@@ -44,60 +44,60 @@ def get_args(args=None):
 
         return any_of_type
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('-s', '--size', default=None, type=tuple_type, help='height,width')
-    parser.add_argument('-m', '--model', default='erfnet', choices=list(models_by_name.keys()))
-    parser.add_argument('-gpu', '--gpus', default=[0], type=int_list_type)
-    parser.add_argument('-cm', '--color_mode', default=0, type=int, choices=color_modes, help='0 (RGB), 1 (GRAY), 2 (NONE)')
-    parser.add_argument('-o', '--optimizer', default='adam', choices=optimizer_choices)
-    parser.add_argument('-bs', '--batch_size', default=1, type=int)
-    parser.add_argument('-l', '--loss', default='categorical_crossentropy', type=str, choices=list(losses_by_name.keys()))
+    parser.add_argument('-s', '--size', default=None, type=tuple_type, help='size of the input images (height, width), inputs will be resized to given size')
+    parser.add_argument('-m', '--model', default='erfnet', choices=list(models_by_name.keys()), help='model to train')
+    parser.add_argument('-gpu', '--gpus', default=[0], type=int_list_type, help='gpus indexes to train on, e.g. train on 1 and 2: --gpus="1,2"')
+    parser.add_argument('-cm', '--color_mode', default=0, type=int, choices=color_modes, help='Color mode: 0 (RGB), 1 (GRAY), 2 (NONE)')
+    parser.add_argument('-o', '--optimizer', default='adam', choices=optimizer_choices, help='optimizer')
+    parser.add_argument('-bs', '--batch_size', default=1, type=int, help='batch size')
+    parser.add_argument('-l', '--loss', default='categorical_crossentropy', type=str, choices=list(losses_by_name.keys()), help='loss')
     parser.add_argument('-lm', '--metrics', default=['iou_score', 'f1_score', 'categorical_accuracy'],
                         type=any_of(metrics_by_name.keys()),
-                        help='choices: %s' % (list(metrics_by_name.keys())))
-    parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float)
-    parser.add_argument('-logdir', '--logdir', default=None)
+                        help='metrics, choices: %s' % (list(metrics_by_name.keys())))
+    parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
+    parser.add_argument('-logdir', '--logdir', default=None, help='log dir (where the tensorboard log files and saved models go)')
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
 
-    parser.add_argument('-e', '--epochs', default=10, type=int)
-    parser.add_argument('-bufsize', '--buffer_size', default=50, type=int)
-    parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int)
-    parser.add_argument('-valfreq', '--validation_freq', default=1, type=int)
-    parser.add_argument('-log', '--log_level', default='INFO', type=str)
-    parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'])
-    parser.add_argument('-args', '--model_args', default={}, type=dict_type)
-    parser.add_argument('-tpu', '--tpu_strategy', action='store_true')
+    parser.add_argument('-e', '--epochs', default=10, type=int, help='number of epochs')
+    parser.add_argument('-bufsize', '--buffer_size', default=50, type=int, help='number of examples to prefetch for training')
+    parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int, help='number of examples to prefetch for validation')
+    parser.add_argument('-valfreq', '--validation_freq', default=1, type=int, help='validate every x epochs')
+    parser.add_argument('-log', '--log_level', default='INFO', type=str, choices=['DEBUG', "NOTSET", "INFO", "WARN", "ERROR", "CRITICAL"], help='log level during training')
+    parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'], help='image resize method (when --size is specified)')
+    parser.add_argument('-args', '--model_args', default={}, type=dict_type, help='arguments to supply to the model, e.g. unet: {"downsampling_method": "conv"}')
+    parser.add_argument('-tpu', '--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
 
     # wandb
     parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used')
     parser.add_argument('-wn', '--wandb_name', default=None, help='name of the run, otherwise wandb will create a name for you')
 
     # weights
-    parser.add_argument('-base_weights', '--base_weights', default=None, type=str)
-    parser.add_argument('-weights', '--model_weights', default=None, type=str)
-    parser.add_argument('-smv', '--saved_model_version', default=0, type=int)
-    parser.add_argument('--no_save_base_model_weights', action="store_true")
-    parser.add_argument('--no_save_model_weights', action="store_true")
-    parser.add_argument('--no_export_saved_model', action="store_true")
+    parser.add_argument('-base_weights', '--base_weights', default=None, type=str, help='path to the base model weights')
+    parser.add_argument('-weights', '--model_weights', default=None, type=str, help='path to the model weights')
+    parser.add_argument('-smv', '--saved_model_version', default=0, type=int, help='saved model version number')
+    parser.add_argument('--no_save_base_model_weights', action="store_true", help='if specifed, do not save base model weights')
+    parser.add_argument('--no_save_model_weights', action="store_true", help='if specifed, do not save model weights')
+    parser.add_argument('--no_export_saved_model', action="store_true", help='if specifed, do not export saved model (for tensorflow model server)')
 
     # data
-    parser.add_argument('-data_dir', '--data_dir', default='/hdd/datasets')
+    parser.add_argument('-data_dir', '--data_dir', default='/hdd/datasets', help='data directory')
     parser.add_argument('-rd', '--record_dir', default=None, help='if none, will be auto detected')
     parser.add_argument('-ro', '--record_options', default='GZIP', help='record compression options')
-    parser.add_argument('-ds', '--dataset', default=None, choices=list(datasets_by_name.keys()))
-    parser.add_argument('-rtag', '--record_tag', default=None, choices=list(google_drive_records_by_tag.keys()))
-    parser.add_argument('-dir', '--directory', default=None)  # train a model from directory
-    parser.add_argument('-aug', '--augmentations', default=[], type=any_of(preprocessing_ds.augmentation_methods))
+    parser.add_argument('-ds', '--dataset', default=None, choices=list(datasets_by_name.keys()), help='dataset to train on')
+    parser.add_argument('-rtag', '--record_tag', default=None, choices=list(google_drive_records_by_tag.keys()), help='record tag for auto downloading records')
+    parser.add_argument('-dir', '--directory', default=None, help='training model on a directory containing images and masks')
+    parser.add_argument('-aug', '--augmentations', default=[], type=any_of(preprocessing_ds.augmentation_methods),
+                        help='a list of augmentations (%s) separated by comma' % str(preprocessing_ds.augmentation_methods))
 
-    parser.add_argument('-tog', '--train_on_generator', action='store_true')
+    parser.add_argument('-tog', '--train_on_generator', action='store_true', help='training using the tf.data.Dataset.from_generator for faster iterations and not creating a tfrecord')
     parser.add_argument('-steps', '--steps_per_epoch', default=-1, type=int, help='if not set, will be calculated based on the number of examples in the record')
     parser.add_argument('-valsteps', '--validation_steps', default=-1, type=int, help='if not set, will be calculated based on the number of examples in the record')
 
     # model
-    parser.add_argument("-fa", '--final_activation', default='softmax', type=str, choices=['softmax', 'sigmoid'])
-    parser.add_argument("-a", '--activation', default='relu', choices=['relu', 'relu6', 'mish', 'swish'])
-    parser.add_argument('-sum', '--summary', action='store_true')
+    parser.add_argument("-fa", '--final_activation', default='softmax', type=str, choices=['softmax', 'sigmoid'], help='activation of the final layer')
+    parser.add_argument('-sum', '--summary', action='store_true', help='summarize model graph')
 
     # ray tune
     # parser.add_argument('-no-ip-address', '--node-ip-address', default=None)
@@ -110,32 +110,41 @@ def get_args(args=None):
     # parser.add_argument('-raylet-name', '--raylet-name', default=None)
 
     # callbacks
-    parser.add_argument('--no_terminate_on_nan', action='store_true')
+    parser.add_argument('--no_terminate_on_nan', action='store_true', help='if specified, do not add callback for terminating when nans occur')
 
     # model checkpoints
-    parser.add_argument('--no_model_checkpoint', action='store_true')
-    parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str)
-    parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true')
+    parser.add_argument('--no_model_checkpoint', action='store_true', help='if specified, do not add callback for model checkpointing')
+    parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str, help='monitor metric/loss when checkpointing')
+    parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true', help='if specified, do not save the best weights only')
 
     # auto start tensorboard
-    parser.add_argument('--start_tensorboard', action='store_true')
-    parser.add_argument('---tensorboard_port', type=int, default=6006)
+    parser.add_argument('--start_tensorboard', action='store_true', help='if specified, auto start tensorboard')
+    parser.add_argument('---tensorboard_port', type=int, default=6006, help='port on which to auto start tensorboard on')
 
     # tensorboard
-    parser.add_argument('--no_tensorboard', action='store_true')
+    parser.add_argument('--no_tensorboard', action='store_true', help='if specified, do not add callback for logging to tensorboard')
     parser.add_argument('--tensorboard_val_images', action='store_true', help='show val images in tensorboard/wandb')
     parser.add_argument('--tensorboard_test_images', action='store_true', help='show test images in tensorboard/wandb')
     parser.add_argument('--tensorboard_train_images_update_batch_freq', type=int, default=-1, help='show train images every n batch images in tensorboard/wandb. If -1, no images will be logged')
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
     parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
-    parser.add_argument('-tb_uf', '--tensorboard_update_freq', default='batch', type=str, choices=['batch', 'epoch'])
+    parser.add_argument('-tb_uf', '--tensorboard_update_freq', default='batch', type=str, choices=['batch', 'epoch'], help='update frequency [batch or epoch] of tensorboard')
 
     # early stopping
-    parser.add_argument('--no_early_stopping', action='store_true')
-    parser.add_argument('-es-patience', '--early_stopping_patience', default=20, type=int)
-    parser.add_argument('-es-mode', '--early_stopping_mode', default='min', type=str)
-    parser.add_argument('-es-monitor', '--early_stopping_monitor', default='val_loss', type=str)
+    parser.add_argument('--no_early_stopping', action='store_true', help='if specified, do not add callback for early stopping')
+    parser.add_argument('-es_patience', '--early_stopping_patience', default=20, type=int, help='early stopping patience [epochs]')
+    parser.add_argument('-es_mode', '--early_stopping_mode', default='min', type=str, help='early stopping mode')
+    parser.add_argument('-es_monitor', '--early_stopping_monitor', default='val_loss', type=str, help='early stopping monitor metric/loss')
+
+    # reduce lr on plateau
+    parser.add_argument('--reduce_lr_on_plateau', action='store_true', help='if specified, do not add callback for reducing lr on plateau')
+    parser.add_argument('-lr_patience', '--reduce_lr_patience', default=10, type=int, help='reduce lr on plateau patience in [epochs]')
+    parser.add_argument('-lr_mode', '--reduce_lr_mode', default='min', type=str, help='reduce lr mode')
+    parser.add_argument('-lr_factor', '--reduce_lr_factor', default=0.1, type=float, help='reduce lr factor')
+    parser.add_argument('-lr_min_lr', '--reduce_lr_min_lr', default=1e-7, type=float, help='minimum learning rate when using reduce_lr_on_plateau')
+    parser.add_argument('-lr_min_delta', '--reduce_lr_min_delta', default=0.0001, type=float, help='reduce lr min delta')
+    parser.add_argument('-lr_monitor', '--reduce_lr_monitor', default='val_loss', type=str, help='reduce lr monitor')
 
     args = parser.parse_args(args=args)
 
@@ -207,6 +216,11 @@ def train_test_model(args, hparams=None, reporter=None):
                                                   min_delta=0,
                                                   patience=args.early_stopping_patience,  # default: 20
                                                   verbose=1))
+
+    if args.reduce_lr_on_plateau:
+        callbacks.append(kcallbacks.ReduceLROnPlateau(monitor=args.reduce_lr_monitor, factor=args.reduce_lr_factor,
+                                                      patience=args.reduce_lr_patience, min_lr=args.reduce_lr_min_lr, verbose=1,
+                                                      mode=args.reduce_lr_mode, min_delta=args.reduce_lr_min_delta))
 
     if hparams:
         from tensorboard.plugins.hparams import api as hp

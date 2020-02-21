@@ -10,6 +10,17 @@ import os
 from pprint import pprint
 
 
+def _parse_int(i):
+    try:
+        return int(i)
+    except:
+        return i
+
+
+def _parse_shape(shape):
+    return list(map(_parse_int, shape))
+
+
 def retrieve_metadata(model_name, host='localhost', port=8501, signature_def='serving_default'):
     server_url = "http://%s:%d/v1/models/%s/metadata" % (host, port, model_name)
     data = requests.get(server_url).json()
@@ -19,6 +30,7 @@ def retrieve_metadata(model_name, host='localhost', port=8501, signature_def='se
     inputs = {}
     for key, input_data in inputs_metadata.items():
         shape = [dim['size'] for dim in input_data['tensor_shape']['dim']]
+        shape = _parse_shape(shape)
         inputs[key] = {}
         inputs[key]['shape'] = shape
         inputs[key]['dtype'] = input_data['dtype']
@@ -26,6 +38,7 @@ def retrieve_metadata(model_name, host='localhost', port=8501, signature_def='se
     outputs = {}
     for key, output_data in outputs_metadata.items():
         shape = [dim['size'] for dim in output_data['tensor_shape']['dim']]
+        shape = _parse_shape(shape)
         outputs[key] = {}
         outputs[key]['shape'] = shape
         outputs[key]['dtype'] = output_data['dtype']
@@ -149,7 +162,7 @@ def threshold_predictions(p, threshold=0.5):
     return p
 
 
-def ensamble_prediction(models, image, host="localhost", port=8501):
+def ensemble_prediction(models, image, host="localhost", port=8501):
 
     predictions = []
 
@@ -159,25 +172,25 @@ def ensamble_prediction(models, image, host="localhost", port=8501):
         p = predict(image, host=host, model_name=model['name'], port=port, input_name=input_name, version=version)
         predictions.append(np.asarray(p))
 
-    ensamble = np.mean(predictions, axis=0)
-    return ensamble, predictions
+    ensemble = np.mean(predictions, axis=0)
+    return ensemble, predictions
 
 
-def ensamble_inference(models, image, host="localhost", port=8501, threshold=0.5):
+def ensemble_inference(models, image, host="localhost", port=8501, threshold=0.5):
 
-    ensamble, predictions = ensamble_prediction(models, image, host=host, port=port)
+    ensemble, predictions = ensemble_prediction(models, image, host=host, port=port)
 
-    if ensamble.shape[-1] == 1 and threshold > 0:
-        ensamble = threshold_predictions(ensamble, threshold=threshold)
-    elif ensamble.shape[-1] > 1:
-        ensamble = np.expand_dims(np.argmax(ensamble, axis=-1), axis=-1)
+    if ensemble.shape[-1] == 1 and threshold > 0:
+        ensemble = threshold_predictions(ensemble, threshold=threshold)
+    elif ensemble.shape[-1] > 1:
+        ensemble = np.expand_dims(np.argmax(ensemble, axis=-1), axis=-1)
 
-    if ensamble.shape[-1] == 1 and threshold > 0:
+    if ensemble.shape[-1] == 1 and threshold > 0:
         predictions = [threshold_predictions(p, threshold=threshold) for p in predictions]
-    elif ensamble.shape[-1] > 1:
+    elif ensemble.shape[-1] > 1:
         predictions = [np.expand_dims(np.argmax(p, axis=-1), axis=-1) for p in predictions]
 
-    return ensamble, predictions
+    return ensemble, predictions
 
 
 if __name__ == '__main__':

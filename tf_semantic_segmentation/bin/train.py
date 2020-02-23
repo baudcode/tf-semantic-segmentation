@@ -251,9 +251,11 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("setting up dataset")
     if args.dataset or args.directory:
-        if args.dataset:
+        if args.dataset and type(args.dataset) == str:
             cache_dir = get_cache_dir(args.data_dir, args.dataset)
             ds = get_dataset_by_name(args.dataset, cache_dir)
+        elif args.dataset:
+            ds = args.dataset
         else:
             ds = DirectoryDataset(args.directory)
             cache_dir = args.directory

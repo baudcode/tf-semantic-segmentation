@@ -150,9 +150,17 @@ if __name__ == "__main__":
 
     # model = unet_resnet((1024, 1024, 3))
     # model.summary()
+    # (960, 480)
 
-    model, _ = unet_inception_resnet_v2((512, 512, 3))
+    model, _ = unet_inception_resnet_v2((480, 960, 3), num_classes=8)
+    K.clear_session()
+
+    model, _ = unet_resnet((480, 960, 3), num_classes=8)
+    K.clear_session()
+
+    model, _ = unet_mobilenet((480, 960, 3), num_classes=8)
+    K.clear_session()
+
     for layer in model.layers:
-        if "conv" in layer.name or "prediction" in layer.name:
-            print(layer.name, layer.output.shape)
+        print(layer.name, layer.output.shape)
     # model.summary()

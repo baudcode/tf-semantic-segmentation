@@ -120,10 +120,9 @@ def satellite_unet(input_shape=(256, 256, 1), num_classes=3, num_first_filters=3
 
     conv10 = Conv2D(num_classes, (1, 1), activation=None)(conv9)
 
-    base_model = Model(inputs=inputs, outputs=conv9)
     model = Model(inputs=inputs, outputs=conv10)
-    return model, base_model
+    return model
 
 
 if __name__ == '__main__':
-    satellite_unet(input_shape=(256, 256, 3), num_classes=3, num_first_filters=16)[0].summary()
+    satellite_unet(input_shape=(256, 256, 3), num_classes=3, num_first_filters=16).summary()

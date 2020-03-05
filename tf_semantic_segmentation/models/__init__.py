@@ -22,7 +22,7 @@ def get_model_description(name):
     return inspect.getdoc(models_by_name[name])
 
 
-def get_model_by_name(name, args) -> (Model, Model):
+def get_model_by_name(name, args) -> Model:
     if name in models_by_name.keys():
         return models_by_name[name](**args)
     else:

@@ -80,11 +80,9 @@ def erfnet(input_shape=(256, 256, 1), num_classes=3, l2=None):
     for i in range(2):
         y = factorized_module(y, dilation=[1, 1], l2=l2)
 
-    base_model = Model(inputs=x, outputs=y)
     y = upsample(y, num_classes, l2=l2)
-
-    return Model(inputs=x, outputs=y), base_model
+    return Model(inputs=x, outputs=y)
 
 
 if __name__ == "__main__":
-    erfnet()
+    erfnet().summary()

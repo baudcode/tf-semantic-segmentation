@@ -70,7 +70,7 @@ def unet_resnet(input_shape=(256, 256, 3), num_classes=8, encoder_weights='image
 
     x = Conv2D(num_classes, (1, 1), activation=None, name="prediction")(conv10)
     model = Model(base_model.input, x)
-    return model, Model(base_model.input, conv10)
+    return model
 
 
 def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='imagenet'):
@@ -105,7 +105,7 @@ def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='im
 
     x = Conv2D(num_classes, (1, 1), activation=None, name="prediction")(conv10)
     model = Model(base_model.input, x)
-    return model, Model(base_model.input, conv10)
+    return model
 
 
 def unet_inception_resnet_v2(input_shape=(256, 256, 3), num_classes=6, encoder_weights='imagenet'):
@@ -143,7 +143,7 @@ def unet_inception_resnet_v2(input_shape=(256, 256, 3), num_classes=6, encoder_w
 
     x = Conv2D(num_classes, (1, 1), strides=(1, 1), activation=None, name="prediction")(conv10)
     model = Model(base_model.input, x)
-    return model, Model(base_model.input, conv10)
+    return model
 
 
 if __name__ == "__main__":
@@ -152,13 +152,13 @@ if __name__ == "__main__":
     # model.summary()
     # (960, 480)
 
-    model, _ = unet_inception_resnet_v2((480, 960, 3), num_classes=8)
+    model = unet_inception_resnet_v2((480, 960, 3), num_classes=8)
     K.clear_session()
 
-    model, _ = unet_resnet((480, 960, 3), num_classes=8)
+    model = unet_resnet((480, 960, 3), num_classes=8)
     K.clear_session()
 
-    model, _ = unet_mobilenet((480, 960, 3), num_classes=8)
+    model = unet_mobilenet((480, 960, 3), num_classes=8)
     K.clear_session()
 
     for layer in model.layers:

@@ -74,10 +74,8 @@ def get_args(args=None):
     parser.add_argument('-wn', '--wandb_name', default=None, help='name of the run, otherwise wandb will create a name for you')
 
     # weights
-    parser.add_argument('-base_weights', '--base_weights', default=None, type=str, help='path to the base model weights')
     parser.add_argument('-weights', '--model_weights', default=None, type=str, help='path to the model weights')
     parser.add_argument('-smv', '--saved_model_version', default=0, type=int, help='saved model version number')
-    parser.add_argument('--no_save_base_model_weights', action="store_true", help='if specifed, do not save base model weights')
     parser.add_argument('--no_save_model_weights', action="store_true", help='if specifed, do not save model weights')
     parser.add_argument('--no_export_saved_model', action="store_true", help='if specifed, do not export saved model (for tensorflow model server)')
 
@@ -322,11 +320,7 @@ def train_test_model(args, hparams=None, reporter=None):
         model_args = {'input_shape': input_shape, "num_classes": num_classes}
         model_args.update(args.model_args)
 
-        model, base_model = get_model_by_name(
-            args.model, model_args)
-
-        if not args.no_save_base_model_weights:
-            callbacks.append(custom_callbacks.SaveBestWeights(base_model, os.path.join(args.logdir, 'best-base-weights.h5')))
+        model = get_model_by_name(args.model, model_args)
 
         if not args.no_save_model_weights:
             callbacks.append(custom_callbacks.SaveBestWeights(model, os.path.join(args.logdir, 'best-weights.h5')))
@@ -334,10 +328,6 @@ def train_test_model(args, hparams=None, reporter=None):
         if args.model_weights:
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
-
-        if args.base_weights:
-            logger.info("restoring base model weights from %s" % args.base_weights)
-            base_model.load_weights(args.base_weights)
 
         model = Model(model.input, Activation(args.final_activation)(model.output))
         logger.info("output shape: %s" % model.output.shape)

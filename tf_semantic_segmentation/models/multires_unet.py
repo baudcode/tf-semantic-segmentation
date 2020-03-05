@@ -172,15 +172,13 @@ def multires_unet(input_shape=(256, 256, 1), num_classes=2):
 
     # conv10 = conv2d_bn(mresblock9, num_classes, 1, 1, activation=None)
     conv10 = Conv2D(num_classes, kernel_size=(1, 1), strides=(1, 1), activation=None)(mresblock9)
-    base_model = Model(inputs=[inputs], outputs=mresblock9)
-
     model = Model(inputs=[inputs], outputs=[conv10])
-    return model, base_model
+    return model
 
 
 def main():
     # Define the model
-    model, _ = multires_unet((128, 128, 3), num_classes=3)
+    model = multires_unet((128, 128, 3), num_classes=3)
     print(model.summary())
 
 

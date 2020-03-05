@@ -89,9 +89,8 @@ def unet(input_shape=(256, 256, 1), num_classes=3, depth=5, activation='relu', n
         y = conv(y, num_filters, activation=activation, l2=l2, conv_type=conv_type)
         logger.debug("decoder - features: %d, shape: %s" % (num_filters, str(y.shape)))
 
-    base_model = Model(inputs, y)
     y = conv(y, num_classes, kernel_size=(1, 1), activation=None, norm=None)
-    return Model(inputs, y), base_model
+    return Model(inputs, y)
 
 
 if __name__ == "__main__":
@@ -104,9 +103,9 @@ if __name__ == "__main__":
     # tf.keras.utils.plot_model(unet_v2(upsampling_method='bilinear', downsampling_method='conv')[0], to_file='unetv2.png', show_shapes=True)
 
     for upsample_method in ['subpixel', 'bilinear', 'conv', 'nearest']:
-        model, _ = unet(upsampling_method=upsample_method, downsampling_method='conv', activation='mish', conv_type='fire')
+        model = unet(upsampling_method=upsample_method, downsampling_method='conv', activation='mish', conv_type='fire')
         print("params: ", model.count_params(), 'upsample method: ', upsample_method)
 
     for downsample_method in ['max_pool', 'avg_pool', 'conv']:
-        model, _ = unet(upsampling_method='bilinear', downsampling_method=downsample_method, activation='mish')
+        model = unet(upsampling_method='bilinear', downsampling_method=downsample_method, activation='mish')
         print("params: ", model.count_params(), 'downsample method: ', downsample_method)

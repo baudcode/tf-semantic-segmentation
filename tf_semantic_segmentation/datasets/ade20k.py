@@ -7,7 +7,6 @@ import csv
 from .utils import get_split_from_list
 from ..utils import get_files, download_file, download_and_extract
 from .dataset import Dataset, DataType
-# TODO: check it, why is it not working?
 # https://github.com/CSAILVision/sceneparsing/blob/master/objectInfo150.txt
 # https://github.com/CSAILVision/sceneparsing/blob/master/objectInfo150.csv
 # download: https://github.com/CSAILVision/semantic-segmentation-pytorch/blob/master/download_ADE20K.sh

@@ -1,4 +1,3 @@
-# TODO: Add ms-coco
 from .utils import DataType, get_split_from_list
 from .dataset import Dataset
 from ..utils import download_and_extract, get_files

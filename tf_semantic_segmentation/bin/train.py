@@ -22,6 +22,7 @@ import argparse
 import shutil
 import ast
 import inspect
+import types
 
 
 def get_args(args=None):
@@ -320,7 +321,13 @@ def train_test_model(args, hparams=None, reporter=None):
         model_args = {'input_shape': input_shape, "num_classes": num_classes}
         model_args.update(args.model_args)
 
-        model = get_model_by_name(args.model, model_args)
+        if isinstance(args.model, str):
+            model = get_model_by_name(args.model, model_args)
+        elif isinstance(args.model, types.FunctionType):
+            model = args.model(**model_args)
+        else:
+            logger.warning("using own model, please make sure num_classes and input_shape is correct")
+            model = args.model
 
         if not args.no_save_model_weights:
             callbacks.append(custom_callbacks.SaveBestWeights(model, os.path.join(args.logdir, 'best-weights.h5')))

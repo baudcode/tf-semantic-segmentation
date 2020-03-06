@@ -5,8 +5,6 @@ from ..settings import logger
 
 import os
 
-# TODO: Test this
-
 
 class DirectoryDataset(Dataset):
 

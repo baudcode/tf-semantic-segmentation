@@ -7,7 +7,7 @@ import multiprocessing
 resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
 
 
-def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad'):
+def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='tf'):
     """
     Arguments:
 
@@ -23,11 +23,18 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     if len(tf.shape(image)) == 2:
         image = tf.expand_dims(image, axis=-1)
 
-    if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
-        image = tf.image.grayscale_to_rgb(image)
+    if mode == 'tf':
+        if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
+            image = tf.image.grayscale_to_rgb(image)
 
-    elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
-        image = tf.image.rgb_to_grayscale(image)
+        elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
+            image = tf.image.rgb_to_grayscale(image)
+    else:
+        if color_mode == ColorMode.RGB and image.shape[-1] == 1:
+            image = tf.image.grayscale_to_rgb(image)
+
+        elif color_mode == ColorMode.GRAY and image.shape[-1] != 1:
+            image = tf.image.rgb_to_grayscale(image)
 
     if size is not None:
         # make 3dim for tf.image.resize
@@ -59,7 +66,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='tf'):
 
     @tf.function
     def map_fn(image, mask, num_classes):
@@ -68,7 +75,7 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False):
         image = tf.image.convert_image_dtype(image, tf.float32)
 
         # resize method for image create float32 image anyway
-        image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method)
+        image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
         if scale_mask:
             num_classes = tf.cast(num_classes, tf.float32)
             mask = tf.cast(mask, tf.float32)

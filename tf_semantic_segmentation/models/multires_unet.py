@@ -1,6 +1,8 @@
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Conv2DTranspose, concatenate, BatchNormalization, Activation, add
 from tensorflow.keras.models import Model
 
+from ..settings import logger
+
 """ code is heavily borrowed from https://github.com/nibtehaz/MultiResUNet/blob/master/MultiResUNet.py """
 
 
@@ -132,51 +134,51 @@ def respath(x, filters, length):
 
 
 def multires_unet(input_shape=(256, 256, 1), num_classes=2):
-    '''
-    MultiResUNet
-
-    Arguments:
-        height {int} -- height of image
-        width {int} -- width of image
-        n_channels {int} -- number of channels in image
-
-    Returns:
-        [keras model] -- MultiResUNet model
-    '''
-
     inputs = Input(input_shape)
 
-    y = inputs
-    paths = []
-    for i in range(4):
-        features = 16 * (i + 1) * 2
-        print("encoding i=%d features=%d" % (i, features))
-        mres = multires_block(features, y)
-        y = MaxPooling2D(pool_size=(2, 2))(mres)
-        paths.append(respath(mres, features, 4 - i))
+    mresblock1 = multires_block(32, inputs)
+    pool1 = MaxPooling2D(pool_size=(2, 2))(mresblock1)
+    mresblock1 = respath(mresblock1, 32, 4)
 
-    # add middle block
-    y = multires_block(32 * 16, y)
+    mresblock2 = multires_block(32 * 2, pool1)
+    pool2 = MaxPooling2D(pool_size=(2, 2))(mresblock2)
+    mresblock2 = respath(mresblock2, 32 * 2, 3)
 
-    for i in reversed(range(4)):
-        features = 16 * (i + 1) * 2
-        print("decoding i=%d features=%d" % (i, features))
+    mresblock3 = multires_block(32 * 4, pool2)
+    pool3 = MaxPooling2D(pool_size=(2, 2))(mresblock3)
+    mresblock3 = respath(mresblock3, 32 * 4, 2)
 
-        y = concatenate([Conv2DTranspose(features, (2, 2), strides=(2, 2), padding='same')(y), paths[i]], axis=3)
-        y = multires_block(features, y)
+    mresblock4 = multires_block(32 * 8, pool3)
+    pool4 = MaxPooling2D(pool_size=(2, 2))(mresblock4)
+    mresblock4 = respath(mresblock4, 32 * 8, 1)
 
-    # 1x1 for classification
-    base_model = Model(inputs=[inputs], outputs=[y])
+    mresblock5 = multires_block(32 * 16, pool4)
 
-    y = conv2d_bn(y, num_classes, 1, 1, activation=None)
-    model = Model(inputs=[inputs], outputs=[y])
+    up6 = concatenate([Conv2DTranspose(
+        32 * 8, (2, 2), strides=(2, 2), padding='same')(mresblock5), mresblock4], axis=3)
+    mresblock6 = multires_block(32 * 8, up6)
 
-    return model, base_model
+    up7 = concatenate([Conv2DTranspose(
+        32 * 4, (2, 2), strides=(2, 2), padding='same')(mresblock6), mresblock3], axis=3)
+    mresblock7 = multires_block(32 * 4, up7)
+
+    up8 = concatenate([Conv2DTranspose(
+        32 * 2, (2, 2), strides=(2, 2), padding='same')(mresblock7), mresblock2], axis=3)
+    mresblock8 = multires_block(32 * 2, up8)
+
+    up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(
+        2, 2), padding='same')(mresblock8), mresblock1], axis=3)
+    mresblock9 = multires_block(32, up9)
+
+    # conv10 = conv2d_bn(mresblock9, num_classes, 1, 1, activation=None)
+    conv10 = Conv2D(num_classes, kernel_size=(1, 1), strides=(1, 1), activation=None)(mresblock9)
+    model = Model(inputs=[inputs], outputs=[conv10])
+    return model
 
 
 def main():
     # Define the model
-    model, _ = multires_unet((128, 128, 3), num_classes=3)
+    model = multires_unet((128, 128, 3), num_classes=3)
     print(model.summary())
 
 

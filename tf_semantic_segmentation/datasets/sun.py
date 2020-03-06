@@ -1,8 +1,6 @@
 # https://groups.csail.mit.edu/vision/SUN/
 # https://bitbucket.org/vrnowgit/ai/src/master/ai/dataset/sunrgbd.py
 
-# TODO: Add sun rgbd
-
 
 from .dataset import Dataset
 from .utils import get_split, DataType

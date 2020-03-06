@@ -74,10 +74,11 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
            "tf-semantic-segmentation-train=tf_semantic_segmentation.bin.train:main",
-           "tf-semantic-segmentation-predict=tf_semantic_segmentation.eval.predict:main",
+           "tf-semantic-segmentation-predict=tf_semantic_segmentation.evaluation.predict:main",
            "tf-semantic-segmentation-tfrecord-writer=tf_semantic_segmentation.bin.tfrecord_writer:main",
            "tf-semantic-segmentation-tfrecord-analyser=tf_semantic_segmentation.bin.tfrecord_analyser:main",
            "tf-semantic-segmentation-tfrecord-download=tf_semantic_segmentation.bin.tfrecord_download:main",
+           "tf-semantic-segmentation-compare-models=tf_semantic_segmentation.evaluation.compare_models:main",
         ],
     },
     ext_modules=[],
@@ -87,7 +88,7 @@ setuptools.setup(
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Operating System :: POSIX :: Linux',
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3',
     ],
 )

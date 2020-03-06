@@ -6,7 +6,6 @@ import types
 
 @pytest.mark.usefixtures('dataset')
 def test_dataset_structure(dataset):
-    # TODO: Add fixture
     ds = dataset
     assert(ds.num_examples(DataType.TRAIN) == 80)
     assert(ds.num_examples(DataType.VAL) == 10)

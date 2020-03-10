@@ -13,6 +13,7 @@ from . import ade20k
 from . import isic
 from . import cvc_clinicdb
 from . import cub
+from . import bioimage
 
 from .directory import DirectoryDataset
 from .utils import DataType, get_split, get_split_from_list, download_records, google_drive_records_by_tag
@@ -44,6 +45,7 @@ datasets_by_name = {
     "cvc_clinicdb": cvc_clinicdb.CVCClinicDB,
     'cub2002011binary': cub.CUB2002011Binary,
     'cub2002011category': cub.CUB2002011Category,
+    'bioimagebenchmark': bioimage.BioimageBenchmark
 }
 
 

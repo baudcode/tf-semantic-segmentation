@@ -7,7 +7,7 @@ import multiprocessing
 resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
 
 
-def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='tf'):
+def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='graph'):
     """
     Arguments:
 
@@ -20,22 +20,31 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     Returns:
     tuple (image, mask)
     """
-    if len(tf.shape(image)) == 2:
-        image = tf.expand_dims(image, axis=-1)
+    if mode == 'graph':
+        # len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2 seems to be a wierd hack when width and height
+        # are not defined
+        is2d = False
+        if len(tf.shape(image)) == 2 or (len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2):
+            image = tf.expand_dims(image, axis=-1)
+            is2d = True
 
-    if mode == 'tf':
-        if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
+        if color_mode == ColorMode.RGB and (tf.shape(image)[-1] == 1 or is2d):
             image = tf.image.grayscale_to_rgb(image)
 
         elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
             image = tf.image.rgb_to_grayscale(image)
-    else:
+
+    elif mode == 'eager':
+        if len(image.shape) == 2:
+            image = tf.expand_dims(image, axis=-1)
+        
         if color_mode == ColorMode.RGB and image.shape[-1] == 1:
             image = tf.image.grayscale_to_rgb(image)
 
         elif color_mode == ColorMode.GRAY and image.shape[-1] != 1:
             image = tf.image.rgb_to_grayscale(image)
-
+    else:
+        raise Exception("unknown mode %s" % mode)
     if size is not None:
         # make 3dim for tf.image.resize
         if mask is not None:
@@ -66,7 +75,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='tf'):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='graph'):
 
     @tf.function
     def map_fn(image, mask, num_classes):
@@ -90,7 +99,7 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='t
     return map_fn
 
 
-def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
+def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
 
     if num_workers > 1:
         dataset = dataset.shard(num_workers, worker_index)
@@ -101,25 +110,25 @@ def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=
     if take > 0:
         dataset = dataset.take(take)
 
-    if cache:
-        dataset = dataset.cache()
+    if shuffle:  # shuffle before repeat to have the maximum randomness
+        dataset = dataset.shuffle(buffer_size=buffer_size, reshuffle_each_iteration=True)
 
     if repeat > 0:
         dataset = dataset.repeat(repeat)
     else:
         dataset = dataset.repeat()
 
-    if shuffle:
-        dataset = dataset.shuffle(buffer_size=buffer_size)
-
     dataset = dataset.batch(batch_size)
 
-    if augment_fn:
+    if cache:  # cache after batching
+        dataset = dataset.cache()
+
+    if augment_fn:  # memory intensive task
         dataset = dataset.map(augment_fn, num_parallel_calls=multiprocessing.cpu_count())
 
-    # dataset = dataset.prefetch(buffer_size=buffer_size)
-    if prefetch:
+    if prefetch:  # prefetch at the end
         dataset = dataset.prefetch(buffer_size // batch_size)
+
     return dataset
 
 

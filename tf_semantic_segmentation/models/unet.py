@@ -8,10 +8,11 @@ import tensorflow as tf
 import math
 
 
-def conv(x, filters, kernel_size=(3, 3), norm='batch', activation='relu', l2=None, padding='SAME', conv_type='conv'):
+def conv(x, filters, kernel_size=(3, 3), strides=(1, 1), norm='batch', activation='relu', l2=None, padding='SAME', conv_type='conv'):
     # print(locals())
     if conv_type == 'conv':
         y = layers.Conv2D(filters, kernel_size=kernel_size,
+                          strides=strides,
                           kernel_regularizer=regularizers.l2(l2) if l2 else None,
                           activation=activation,
                           padding=padding)(x)

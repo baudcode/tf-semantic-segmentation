@@ -5,7 +5,7 @@ from . import mots_challenge
 from . import mapping_challenge
 from . import ms_coco
 from . import pascal
-from . import plastic
+from . import taco
 from . import shapes
 from . import sun
 from . import toy
@@ -29,9 +29,9 @@ datasets_by_name = {
     "coco2014": ms_coco.Coco2014,
     "coco2017": ms_coco.Coco2017,
     "cityscapes": cityscapes.Cityscapes,
-    "tacobinary": plastic.TacoBinary,
-    "tacocategory": plastic.TacoCategory,
-    "tacosupercategory": plastic.TacoSuperCategory,
+    "tacobinary": taco.TacoBinary,
+    "tacocategory": taco.TacoCategory,
+    "tacosupercategory": taco.TacoSuperCategory,
     "mots": mots_challenge.MotsChallenge,
     "pascalvoc2012": pascal.PascalVOC2012,
     # dummy datasets for testing

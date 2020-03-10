@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 import multiprocessing
 
-resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
+resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad', 'patch']
 
 
 def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='graph'):
@@ -65,6 +65,10 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
             image = tf.image.resize_with_crop_or_pad(image, size[0], size[1])
             if mask is not None:
                 mask = tf.image.resize_with_crop_or_pad(mask, size[0], size[1])  # use nearest for no interpolation
+        
+        elif resize_method == 'patch':
+            image, mask = select_patch(image, mask, size, color_mode)
+        
         else:
             raise Exception("unknown resize method %s" % resize_method)
 
@@ -97,6 +101,33 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='g
         return image, mask
 
     return map_fn
+
+
+def select_patch(image, mask, patch_size, color_mode):
+    """
+    Select a random patch on image, mask at the same location
+
+    Args:
+        image (tf.Tensor): Tensor for the input image of shape (h x w x (1 or 3)), dtype: float32
+        mask (tf.Tensor): Tensor for the mask image of shape (h x w x 1), dtype: uint8
+        patch_size (tuple): Size of patch (height, width)
+    Returns:
+        Tuple[tf.Tensor, tf.Tensor]: Tuple of tensors (image, mask) with shape (patch_size[0], patch_size[1], 3)
+    """
+    image = tf.image.convert_image_dtype(image, tf.uint8)
+    if color_mode == ColorMode.RGB:
+        # use alpha channel for mask
+        concat = tf.concat([image, mask], axis=-1)
+        patches = tf.image.random_crop(concat, size=[patch_size[0], patch_size[1], 4])
+        patch_image = tf.image.convert_image_dtype(patches[:, :, :3], tf.float32)
+        patch_mask = tf.expand_dims(patches[:, :, 3], axis=-1)
+    else:
+        stack = tf.stack([image, mask], axis=0)
+        patches = tf.image.random_crop(stack, size=[2, patch_size[0], patch_size[1], 1])
+        patch_image = patches[0]
+        patch_mask = patches[1]
+    
+    return (patch_image, patch_mask)
 
 
 def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):

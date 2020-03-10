@@ -1,10 +1,11 @@
 from .dataset import Dataset, DataType
 from ..utils import get_files
-from .utils import get_split
+from .utils import get_split, load_image
 from ..settings import logger
 
 import os
-
+import tensorflow as tf
+import random
 
 class DirectoryDataset(Dataset):
 
@@ -69,3 +70,45 @@ class DirectoryDataset(Dataset):
 
     def raw(self):
         return self.split
+
+
+    def tfdataset(self, data_type=DataType.TRAIN, randomize=False):
+
+        data = self.raw()[data_type]
+        
+        if randomize:
+            random.shuffle(data)
+
+        image_paths = [d[0] for d in data]
+        mask_paths = [d[1] for d in data]
+
+        assert(len(image_paths) == len(mask_paths)), "len of images does not equal len of masks"
+
+        images_ds = tf.data.Dataset.from_tensor_slices(image_paths).map(
+            lambda path: load_image(path, tf.uint8),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
+        masks_ds = tf.data.Dataset.from_tensor_slices(mask_paths).map(
+            lambda path: load_image(path, tf.uint8, squeeze=True, channels=1),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        )
+        nc = self.num_classes
+        num_classes_ds = tf.data.Dataset.from_tensor_slices([nc for i in range(len(image_paths))])
+
+        dataset = tf.data.Dataset.zip((images_ds, masks_ds, num_classes_ds))
+        return dataset
+
+if __name__ == "__main__":
+    from ..processing import dataset
+    from .utils import convert2tfdataset
+    from ..visualizations import show
+    import numpy as np
+    ds = DirectoryDataset('output')
+    
+    tfds = convert2tfdataset(ds, DataType.TRAIN)
+    fn = dataset.get_preprocess_fn((128, 128), 0, 'resize', True, mode='eager')
+    tfds = tfds.map(fn)
+    for image, mask in tfds:
+        show.show_images([image.numpy(), mask.numpy().astype(np.float32)])
+        print(image.shape, mask.shape)
+        break

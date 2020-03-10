@@ -62,6 +62,17 @@ def get_split_from_dirs(images_dir, masks_dir, extensions=['png'], train_split=0
 
 
 def convert2tfdataset(dataset, data_type, randomize=True):
+    """
+    Converts a tf_semantic_segmentation.datasets.dataset.Dataset class to tf.data.Dataset which returns a tuple
+    (image, mask, num_classes)
+
+    Arguments:
+        dataset (tf_semantic_segmentation.datasets.dataset.Dataset): dataset to convert
+        data_type (tf_semantic_segmentation.datasets.dataset.DataType): one of (train, val, test)
+        randomize (bool): randomize the order of the paths, otherwise every epoch it yields the same
+    Returns:
+        tf.data.Dataset
+    """
 
     def gen():
         indexes = np.arange(dataset.num_examples(data_type))
@@ -96,13 +107,32 @@ def convert2tfdataset(dataset, data_type, randomize=True):
         mask = tf.reshape(mask, (shape[0], shape[1]))
         return image, mask, num_classes
 
-    ds = tf.data.Dataset.from_generator(
-        gen, (tf.uint8, tf.uint8, tf.int64, tf.int64), ([None, None, None], [None, None], [], [3]))
-    ds = ds.map(map_fn, num_parallel_calls=multiprocessing.cpu_count())
+    if hasattr(dataset, 'tfdataset'):
+        logger.info("convert2tfdataset is using tfdataset optimized wrapper function")
+        ds = dataset.tfdataset(data_type, randomize=randomize)
+    else:
+        ds = tf.data.Dataset.from_generator(
+            gen, (tf.uint8, tf.uint8, tf.int64, tf.int64), ([None, None, None], [None, None], [], [3]))
+        ds = ds.map(map_fn, num_parallel_calls=multiprocessing.cpu_count())
 
     #ds[0] = tf.reshape(ds[0], ds[2])
     #ds[1] = tf.reshape(ds[1], [ds[2][0], ds[2][1], tf.convert_to_tensor(dataset.num_classes, tf.int64)])
     return ds
+
+
+def load_image(image_path, dtype, squeeze=True, channels=3):
+    image_string = tf.io.read_file(image_path)
+    image = tf.cond(
+      tf.image.is_jpeg(image_string),
+      lambda: tf.image.decode_jpeg(image_string, channels=channels),
+      lambda: tf.image.decode_png(image_string, channels=channels))
+
+    image = tf.image.convert_image_dtype(image, dtype)
+    
+    if squeeze and channels == 1:
+        image = tf.squeeze(image, axis=-1)
+    
+    return image
 
 
 def download_records(tag, destination_dir):

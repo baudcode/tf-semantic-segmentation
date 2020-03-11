@@ -68,8 +68,8 @@ def get_args(args=None):
     parser.add_argument('-log', '--log_level', default='INFO', type=str, choices=['DEBUG', "NOTSET", "INFO", "WARN", "ERROR", "CRITICAL"], help='log level during training')
     parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'], help='image resize method (when --size is specified)')
     parser.add_argument('-args', '--model_args', default={}, type=dict_type, help='arguments to supply to the model, e.g. unet: {"downsampling_method": "conv"}')
-    parser.add_argument('-tpu', '--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
-    parser.add_argument('-float16', '--mixed_float16', action='store_true', help='use tf 2.1 feature to train a whole keras model on float16, REQUIRES TF 2.1')
+    parser.add_argument('--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
+    parser.add_argument('--mixed_float16', action='store_true', help='use tf 2.1 feature to train a whole keras model on float16, REQUIRES TF 2.1')
 
     # wandb
     parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used')

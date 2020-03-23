@@ -373,7 +373,12 @@ def train_test_model(args, hparams=None, reporter=None):
     train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
+    if len(args.augmentations) == 0:
+        augment_fn = None
+    else:
+        logger.info("applying augmentations %s" % str(args.augmentations))
+        augment_fn = preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
+
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing

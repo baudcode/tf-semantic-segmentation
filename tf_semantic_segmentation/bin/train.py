@@ -171,7 +171,7 @@ def train_test_model(args, hparams=None, reporter=None):
     logger.info("using tf version %s" % tf.__version__)
 
     logger.info("setting up callbacks")
-    callbacks = []
+    callbacks = args.callbacks if hasattr(args, 'callbacks') else []
 
     # setting up wandb
     if args.wandb_project:
@@ -342,7 +342,7 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
 
-        model = Model(model.input, Activation(args.final_activation)(model.output))
+        model = Model(model.input, Activation(args.final_activation, dtype='float32')(model.output))
         logger.info("output shape: %s" % model.output.shape)
         logger.info("input shape: %s" % model.input.shape)
 

@@ -5,6 +5,7 @@ import os
 import numpy as np
 import imageio
 
+
 class BioimageBenchmark(Dataset):
     """
     Kaggle 2018 Data Science Bowl
@@ -38,7 +39,7 @@ class BioimageBenchmark(Dataset):
             masks = get_files(os.path.join(abs_dir, 'masks'), extensions=['png'])
             if len(images) == 1:
                 trainset.append((images[0], masks))
-        
+
         # use part of train dataset as validation set
         trainset, valset = get_split_from_list(trainset, split=0.9)
 
@@ -54,7 +55,7 @@ class BioimageBenchmark(Dataset):
             DataType.VAL: valset,
             DataType.TEST: testset
         }
-    
+
     @property
     def labels(self):
         return ['bg', 'nucleus']
@@ -74,6 +75,7 @@ class BioimageBenchmark(Dataset):
             mask |= nucleus
 
         mask = np.divide(mask, 255)
+        mask = mask.astype(np.uint8)
         return image, mask
 
 

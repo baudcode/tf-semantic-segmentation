@@ -296,10 +296,16 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("input shape: %s" % str(input_shape))
 
-    if args.mixed_float16:
-        logger.info("using mixed float16 precision, tf version >= 2.1 required")
-        policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
-        tf.keras.mixed_precision.experimental.set_policy(policy)
+    try:
+        if args.mixed_float16:
+            logger.info("using mixed float16 precision, tf version >= 2.1 required")
+            policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
+            tf.keras.mixed_precision.experimental.set_policy(policy)
+        else:
+            tf.keras.mixed_precision.experimental.set_policy(None)
+
+    except Exception as e:
+        logger.error("cannot set mixed precision policy, exception: %s" % str(e))
 
     # set scale mask based on sigmoid activation
     scale_mask = args.final_activation == 'sigmoid'

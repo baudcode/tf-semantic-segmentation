@@ -38,6 +38,7 @@
   - MobilenetUnet (unet with mobilenet encoder pre-trained on imagenet)
   - unet_inception_resnet_v2 (unet with inception-resnet v2 encoder pre-trained on imagenet)
   - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
+  - AttentionUnet
 
 - Losses:
 

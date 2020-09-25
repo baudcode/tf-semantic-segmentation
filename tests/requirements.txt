@@ -1,4 +1,4 @@
-tensorflow-gpu==2.1.0
+tensorflow-gpu==2.1.2
 tensorflow-addons==0.7.0
 pytest-pep8
 pytest-cov

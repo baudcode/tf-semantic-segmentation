@@ -13,7 +13,7 @@ class PixelNorm(Layer):
         super(PixelNorm, self).__init__()
         self.epsilon = epsilon
 
-    def call(self, x, training=True):
+    def __call__(self, x, training=True):
         return x / K.sqrt(K.mean(K.square(x), axis=-1, keepdims=True) + self.epsilon)
 
     def get_config(self):

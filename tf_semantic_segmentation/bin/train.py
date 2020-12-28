@@ -176,7 +176,7 @@ def train_test_model(args, hparams=None, reporter=None):
     # setting up wandb
     if args.wandb_project:
         import wandb
-        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True)
+        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True, reinit=True)
         callbacks.append(wandb.keras.WandbCallback())
 
         if args.logdir is None:

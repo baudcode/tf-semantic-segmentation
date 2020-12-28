@@ -1,8 +1,9 @@
 import tensorflow as tf
 from .pixel_norm import PixelNorm
+from ..utils import logger
 
 
-def get_norm_by_name(name):
+def get_norm_by_name(name='batch'):
     if name == 'batch':
         return tf.keras.layers.BatchNormalization(axis=-1)
     elif name == 'instance':
@@ -11,4 +12,5 @@ def get_norm_by_name(name):
     elif name == 'pixel':
         return PixelNorm()
     else:
-        raise Exception("unknown norm name %s" % name)
+        logger.warn("using default norm: batch")
+        return tf.keras.layers.BatchNormalization(axis=-1)

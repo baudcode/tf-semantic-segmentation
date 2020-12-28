@@ -384,8 +384,10 @@ def get_now_datetime():
 def format_datetime(d, mode="postgis"):
     if mode == 'postgis':
         return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    if mode == 'filename':
+    elif mode == 'filename':
         return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    else:
+        return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def ndarray_to_base64(img):

@@ -31,7 +31,10 @@
 
 - Models:
 
+  - U2Net / U2NetP
   - Unet
+  - PSP
+  - FCN
   - Erfnet
   - MultiResUnet
   - SatelliteUnet
@@ -39,6 +42,7 @@
   - unet_inception_resnet_v2 (unet with inception-resnet v2 encoder pre-trained on imagenet)
   - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
   - AttentionUnet
+  - NestedUnet (Unet++)
 
 - Losses:
 
@@ -83,15 +87,8 @@ sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 #### Tensorflow (2.x) & Tensorflow Addons (optional)
 
 ```shell
-pip install tensorflow-gpu==2.1.0 --upgrade
-pip install tensorflow-addons==0.7.0 --upgrade
-```
-
-or
-
-```shell
-pip install tensorflow-gpu==2.0.0 --upgrade
-pip install tensorflow-addons==0.6.0 --upgrade
+pip install tensorflow-gpu==2.4.0 --upgrade
+pip install tensorflow-addons==0.12.0 --upgrade
 ```
 
 ## Training

@@ -25,7 +25,7 @@ from tensorflow.keras.layers import GlobalMaxPooling2D
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
-from tensorflow.keras.utils import get_source_inputs, get_file, convert_all_kernels_in_model
+from tensorflow.keras.utils import get_source_inputs, get_file
 from .utils import _obtain_input_shape
 
 WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels.h5'

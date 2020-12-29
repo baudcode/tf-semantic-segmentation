@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import Layer
+from tensorflow.python.keras.layers import Layer
 from tensorflow.keras import backend as K
 
 
@@ -13,7 +13,7 @@ class PixelNorm(Layer):
         super(PixelNorm, self).__init__()
         self.epsilon = epsilon
 
-    def __call__(self, x, training=True):
+    def call(self, x):
         return x / K.sqrt(K.mean(K.square(x), axis=-1, keepdims=True) + self.epsilon)
 
     def get_config(self):

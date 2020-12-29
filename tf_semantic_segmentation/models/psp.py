@@ -91,7 +91,7 @@ def get_closest(x):
         return 96
 
 
-def psp(input_shape=(512, 512, 3), num_channels=8, depth=5, norm='batch', activation='relu', encoder_weights='imagenet'):
+def psp(input_shape=(512, 512, 3), num_classes=8, depth=5, norm='batch', activation='relu', encoder_weights='imagenet'):
     base_model = resnet50.ResNet50(input_shape=input_shape, include_top=False, weights=encoder_weights)
 
     for l in base_model.layers:
@@ -118,7 +118,7 @@ def psp(input_shape=(512, 512, 3), num_channels=8, depth=5, norm='batch', activa
     # to use global average pooling channels must be evenly divisible by 3
     y = tf.image.resize(conv, size, method='bilinear')
 
-    y = psp_head(y, num_channels, norm=norm, activation=activation)
+    y = psp_head(y, num_classes, norm=norm, activation=activation)
     y = tf.image.resize(y, (input_shape[0], input_shape[1]), method='bilinear')
     return Model(inputs=base_model.inputs, outputs=y)
 

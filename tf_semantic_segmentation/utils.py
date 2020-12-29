@@ -59,7 +59,7 @@ def kill_start_tensorboard(logdir, port=6006):
 
     def target():
         try:
-            kill_process_by_port(port)
+            kill(port)
         except Exception as e:
             logger.warning("could not kill tensorboard, %s" % str(e))
         run(['tensorboard', '--logdir=%s' % logdir, '--port=%d' % port])
@@ -69,18 +69,17 @@ def kill_start_tensorboard(logdir, port=6006):
     return t
 
 
-def kill_process_by_port(port, protocol='tcp'):
-    run([
-        'fuser', '-n', protocol, '-k', str(port)
-    ], block=True)
-
-
-def kill(port):
-    pid = str(subprocess.check_output(['lsof', '-t', '-i:6006']), 'utf-8')[:-1]
+def kill(port: int):
+    try:
+        pid = str(subprocess.check_output(['lsof', '-t', '-i:%d' % port]), 'utf-8')[:-1]
+    except subprocess.CalledProcessError:
+        logger.warn("no process on port %d" % port)
+        return
 
     if pid:
         pid = int(pid)
 
+    logger.info("kill process with pid %d on port %d" % (pid, port))
     cmd = ['kill', '%d' % pid]
     return call_for_ret_code(cmd)
 

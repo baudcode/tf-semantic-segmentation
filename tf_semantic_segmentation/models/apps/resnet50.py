@@ -278,10 +278,11 @@ def resnet50(input_shape=(512, 512, 3), encoder_weights='imagenet') -> Model:
     conv1 = model.get_layer("activation_1").output
     conv2 = model.get_layer("activation_10").output
     conv3 = model.get_layer("activation_22").output
-    conv4 = model.get_layer("activation_40").output
-    conv5 = model.get_layer("activation_48").output
+    conv4 = model.get_layer("activation_39").output
+    conv5 = model.get_layer("activation_40").output
+    conv6 = model.get_layer("activation_48").output
 
-    return Model(inputs=model.inputs, outputs=[conv1, conv2, conv3, conv4, conv5])
+    return Model(inputs=model.inputs, outputs=[conv1, conv2, conv3, conv4, conv5, conv6])
 
 
 if __name__ == "__main__":

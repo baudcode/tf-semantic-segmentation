@@ -1,4 +1,4 @@
-site_name: My Docs
+site_name: TF Semantic Segmentation Documentation
 theme:
   name: material
 repo_name: baudcode/tf-semantic-segmentation

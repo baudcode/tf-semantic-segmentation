@@ -62,7 +62,7 @@ def main():
     parser.add_argument('-c', '--data_dir', default=None)
     parser.add_argument('-num', '--num_examples_per_record', default=100, type=int)
     parser.add_argument('-s', '--size', default=None, type=lambda x: list(map(int, x.split(','))), help='height,width')
-    parser.add_argument('-rm', '--resize_method', default='resize_with_pad')
+    parser.add_argument('-rm', '--resize_method', default='resize')
     parser.add_argument('-cm', '--color_mode', default=ColorMode.NONE, type=int)
 
     parser.add_argument('-o', '--overwrite', action='store_true')

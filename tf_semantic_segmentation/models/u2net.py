@@ -1,10 +1,9 @@
-from tf_semantic_segmentation.layers.utils import get_norm_by_name
 import tensorflow as tf
 from tensorflow.keras import layers, regularizers
 from tensorflow.keras.models import Model
 
 
-def conv(x, filters=3, padding=1, dirate=1, kernel_size=3, l2=None):
+def conv(x, filters=3, dirate=1, kernel_size=3, l2=None):
     return layers.Conv2D(filters, kernel_size=kernel_size,
                          kernel_regularizer=regularizers.l2(l2) if l2 else None,
                          activation=None,
@@ -13,7 +12,7 @@ def conv(x, filters=3, padding=1, dirate=1, kernel_size=3, l2=None):
 
 
 def rebnconv(x, filters=3, dirate=1, l2=None):
-    y = conv(x, filters, padding=dirate, dirate=dirate, l2=l2)
+    y = conv(x, filters, dirate=dirate, l2=l2)
     y = layers.BatchNormalization(axis=-1)(y)
     return layers.Activation("relu")(y)
 

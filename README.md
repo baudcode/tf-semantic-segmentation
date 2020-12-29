@@ -4,10 +4,23 @@
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-)
+[![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://tf-semantic-segmentation.readthedocs.io/?badge=latest)
+
+### Quick Start
+See [GETTING_STARTED](#getting-started), or the [Colab Notebook](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-).
+
+Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.io/en/latest/).
 
 ## Features
 
-- Datasets
+- Distributed Training on Multiple GPUs
+- Hyper Parameter Optimization using WandB
+- WandB Integration
+- Easily create TFRecord from Directory
+- Tensorboard visualizations
+- Ensemble inference
+
+#### Datasets
 
   - Ade20k
   - Camvid
@@ -22,29 +35,24 @@
   - ISIC2018
   - CVC-ClinicDB
 
-- Distributed Training on Multiple GPUs
-- Hyper Parameter Optimization using WandB
-- WandB Integration
-- Easily create TFRecord from Directory
-- Tensorboard visualizations
-- Ensemble inference
 
-- Models:
 
-  - U2Net / U2NetP
-  - Unet
-  - PSP
-  - FCN
-  - Erfnet
-  - MultiResUnet
+#### Models
+
+  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007)
+  - [Unet](https://arxiv.org/abs/1505.04597)
+  - [PSP](https://arxiv.org/abs/1612.01105)
+  - [FCN](https://arxiv.org/abs/1411.4038)
+  - [Erfnet](https://arxiv.org/abs/1806.08522)
+  - [MultiResUnet](https://arxiv.org/abs/1902.04049)
+  - [NestedUnet (Unet++)](https://arxiv.org/abs/1807.10165)
   - SatelliteUnet
   - MobilenetUnet (unet with mobilenet encoder pre-trained on imagenet)
-  - unet_inception_resnet_v2 (unet with inception-resnet v2 encoder pre-trained on imagenet)
+  - InceptionResnetV2Unet (unet with inception-resnet v2 encoder pre-trained on imagenet)
   - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
   - AttentionUnet
-  - NestedUnet (Unet++)
 
-- Losses:
+#### Losses
 
   - Catagorical Crossentropy
   - Binary Crossentropy
@@ -55,23 +63,23 @@
   - Focal
   - Focal + Tversky
 
-- Activations:
+#### Activations
 
   - mish
   - swish
   - relu6
 
-- Optimizers:
+#### Optimizers
 
   - Ranger
   - RAdam
 
-- Normalization
+#### Normalization
 
   - Instance Norm
   - Batch Norm
 
-- On the fly Augmentations
+#### On the fly Augmentations
 
   - flip left/right
   - flip up/down
@@ -91,9 +99,15 @@ pip install tensorflow-gpu==2.4.0 --upgrade
 pip install tensorflow-addons==0.12.0 --upgrade
 ```
 
-## Training
+## Installation
 
-### Hint: To see train/test/val images you have to start tensorboard like this
+```shell
+pip install tf-semantic-segmentation
+```
+
+## [Getting Started](#getting-started)
+
+- Hint: To see train/test/val images you have to start tensorboard like this
 
 ```bash
 tensorboard --logdir=logs/ --reload_multifile=true
@@ -219,6 +233,8 @@ There are the following addition arguments:
 - -s [--size] '$width,$height' (f.e. "512,512")
 - -rm [--resize_method] ('resize', 'resize_with_pad', 'resize_with_crop_or_pad)
 - cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
+
+
 
 ## Datasets
 

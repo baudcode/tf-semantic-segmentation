@@ -15,7 +15,7 @@ import threading
 import io
 import PIL.Image
 import base64
-
+import tensorflow as tf
 
 from functools import reduce
 from .settings import logger
@@ -23,6 +23,13 @@ from .settings import logger
 
 class ExtractException(Exception):
     pass
+
+def tf_version_gt_eq(version):
+    # checks if the tensorflow version is greater or equal to `version`
+    for r_part, part in zip(map(int, version.split(".")), map(int, tf.__version__.split("."))):
+        if r_part > part:
+            return False
+    return True
 
 
 def run(cmd, block=True):

@@ -16,6 +16,39 @@ def get_time_diff_str(start, end, period=1):
     h = diff // 3600
     return "%dh %dm %ds" % (h, m, s)
 
+class TimingCallback(tf.keras.callbacks.Callback):
+    """ Calculates the average time per batch """
+
+    def __init__(self, batch_size: int, total: int, log_interval: int = 10):
+        super(TimingCallback, self).__init__()
+        self.start_time = time.time()
+        self.times = []
+        self.batch_size = batch_size
+        self.total = total
+        self.log_interval = log_interval
+    
+    def on_batch_end(self, batch, logs={}):
+        self.times.append(time.time() - self.batch_start_time)
+
+        if len(self.times) % self.log_interval == 0:
+            log_times = self.times[-self.log_interval:]
+            sec_per_batch = np.mean(log_times)
+            images_per_sec = (self.batch_size * self.log_interval) / sum(log_times)
+            logger.info("[TimingCallback] Batch %d: %.3f s/batch %.1f images/s" % (batch, sec_per_batch, images_per_sec))
+    
+    def on_epoch_end(self, epoch, logs={}):
+        total_time = sum(self.times)
+        sec_per_batch = np.mean(self.times)
+        images_per_sec = self.total / total_time
+
+        logger.info("[TimingCallback] Epoch %d: %.3f s/batch %.1f images/s" % (epoch, sec_per_batch, images_per_sec))
+        self.times = []
+        self.start_time = time.time()
+
+    def on_batch_begin(self, batch, logs={}):
+        self.batch_start_time = time.time()
+    
+
 
 class PredictionCallback(tf.keras.callbacks.Callback):
     """Predictions logged using tensorflow summary writer"""

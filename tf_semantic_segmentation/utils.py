@@ -414,13 +414,17 @@ def get_size(path='.'):
 
     return total_size
 
+def get_gpu_stats():
+    cmd = ["nvidia-smi", 
+        "--query-gpu=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used",
+        "--format=csv"]
+    headers = "timestamp name pci.bus_id driver_version pstate pcie.link.gen.max pcie.link.gen.current temperature.gpu utilization.gpu utilization.memory memory.total memory.free memory.used".split(" ")
+    outputs = str(subprocess.check_output(cmd), 'utf-8')
+    values = outputs.split("\n")[-2].split(",")
+    values = list(map(lambda x: x.strip(), values))
+    return dict(zip(headers, values))
+
 
 if __name__ == "__main__":
-    import time
-
-    logdir = os.path.abspath('logs/')
-    kill_start_tensorboard(logdir)
-
-    while 1:
-        print("staying alive")
-        time.sleep(1)
+    from pprint import pprint
+    pprint(get_gpu_stats())

@@ -207,7 +207,6 @@ def train_test_model(args, hparams=None, reporter=None):
     if not args.no_terminate_on_nan:
         callbacks.append(kcallbacks.TerminateOnNaN())
 
-
     if not args.no_model_checkpoint:
         callbacks.append(kcallbacks.ModelCheckpoint(os.path.join(args.logdir, "model-best.h5"),
                                                     monitor=args.model_checkpoint_monitor,  # val_loss default
@@ -253,12 +252,15 @@ def train_test_model(args, hparams=None, reporter=None):
     assert(args.record_dir is not None or args.dataset is not None or args.record_tag is not None or args.directory is not None)
 
     logger.info("setting up dataset")
+    ds = None  # will be used when in dataset mode
+
     if args.dataset or args.directory:
         if args.dataset and type(args.dataset) == str:
             cache_dir = get_cache_dir(args.data_dir, args.dataset)
             ds = get_dataset_by_name(args.dataset, cache_dir)
         elif args.dataset:
             ds = args.dataset
+            cache_dir = get_cache_dir(args.data_dir, args.dataset.__class__.__name__)
         else:
             ds = DirectoryDataset(args.directory)
             cache_dir = args.directory
@@ -267,6 +269,7 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("using dataset %s with %d classes" % (ds.__class__.__name__, ds.num_classes))
 
         if not args.train_on_generator:
+
             logger.info("writing records")
 
             record_dir = os.path.join(cache_dir, 'records')
@@ -275,11 +278,14 @@ def train_test_model(args, hparams=None, reporter=None):
             writer = TFWriter(record_dir, options=args.record_options)
             writer.write(ds)
             writer.validate(ds)
+        else:
+            record_dir = None
 
         num_classes = ds.num_classes
     elif args.record_dir:
         if not os.path.exists(args.record_dir):
             raise Exception("cannot find record dir %s" % args.record_dir)
+
         record_dir = args.record_dir
         num_classes = TFReader(record_dir, options=args.record_options).num_classes
     elif args.record_tag:
@@ -287,6 +293,8 @@ def train_test_model(args, hparams=None, reporter=None):
         record_dir = os.path.join(args.data_dir, 'downloaded', record_tag)
         download_records(record_tag, record_dir)
         num_classes = TFReader(record_dir, options=args.record_options).num_classes
+    else:
+        raise Exception("cannot find either dataset/directory/record_dir or record_tag")
 
     if args.size and args.color_mode != ColorMode.NONE:
         input_shape = (args.size[0], args.size[1], 3 if args.color_mode == ColorMode.RGB else 1)
@@ -294,6 +302,9 @@ def train_test_model(args, hparams=None, reporter=None):
     elif args.train_on_generator:
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")
     else:
+        if record_dir is None:
+            raise Exception("record_dir cannot be None when trying to read record files")
+
         input_shape = TFReader(record_dir, options=args.record_options).input_shape
         input_shape = (input_shape[0], input_shape[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
@@ -369,8 +380,11 @@ def train_test_model(args, hparams=None, reporter=None):
         model.summary()
 
     if args.train_on_generator:
+        if ds is None:
+            raise Exception("Dataset cannot be None when training with generator")
         train_ds = convert2tfdataset(ds, DataType.TRAIN)
         val_ds = convert2tfdataset(ds, DataType.VAL)
+        reader = None  # no tfrecord reader
     else:
         logger.info("using tfreader to read record dir %s" % record_dir)
         reader = TFReader(record_dir, options=args.record_options)
@@ -423,7 +437,7 @@ def train_test_model(args, hparams=None, reporter=None):
             test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
             test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
             test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), val_ds_images,
+            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
                                                                                 scaled_mask=scale_mask,
                                                                                 binary_threshold=args.binary_threshold,
                                                                                 update_freq=args.tensorboard_images_freq)

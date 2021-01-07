@@ -62,6 +62,8 @@ def get_args(args=None):
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
 
     parser.add_argument('-e', '--epochs', default=10, type=int, help='number of epochs')
+    parser.add_argument('-ti', '--time_it', default=False, action='store_true', help='adds timing callback to measure images/sec and sec/batch')
+    parser.add_argument('-ti_freq', '--time_it_log_freq', default=50, type=int, help='(info) log after x batches')
     parser.add_argument('-bufsize', '--buffer_size', default=50, type=int, help='number of examples to prefetch for training')
     parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int, help='number of examples to prefetch for validation')
     parser.add_argument('-valfreq', '--validation_freq', default=1, type=int, help='validate every x epochs')
@@ -204,6 +206,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if not args.no_terminate_on_nan:
         callbacks.append(kcallbacks.TerminateOnNaN())
+
 
     if not args.no_model_checkpoint:
         callbacks.append(kcallbacks.ModelCheckpoint(os.path.join(args.logdir, "model-best.h5"),
@@ -437,6 +440,10 @@ def train_test_model(args, hparams=None, reporter=None):
     else:
         logger.warning("Reading total number of input samples, cause no steps were specifed. This may take a while.")
         steps_per_epoch = reader.num_examples(DataType.TRAIN) // global_batch_size
+
+    # add timing callback after steps per epoch is known
+    if args.time_it:
+        callbacks.append(custom_callbacks.TimingCallback(args.batch_size, steps_per_epoch * global_batch_size, log_interval=args.time_it_log_freq))
 
     if args.validation_steps != -1:
         validation_steps = args.validation_steps

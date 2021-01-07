@@ -1,4 +1,5 @@
 from . import ColorMode
+from .. import utils
 
 import tensorflow as tf
 import numpy as np
@@ -148,6 +149,13 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
         dataset = dataset.repeat(repeat)
     else:
         dataset = dataset.repeat()
+    
+    # `tf.data.Options()` object then setting `options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA`
+    if utils.tf_version_gt_eq('2.4'):
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
+        dataset = dataset.with_options(options)
+
 
     dataset = dataset.batch(batch_size)
 

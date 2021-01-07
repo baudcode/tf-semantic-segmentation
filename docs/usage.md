@@ -67,4 +67,6 @@ args.final_activation = 'softmax'
 
 # train and test
 results, model = train_test_model(args)
+results['evaluate'] # returns last evaluated results using val dataset
+results['history'] # returns the history object from model.fit()
 ```

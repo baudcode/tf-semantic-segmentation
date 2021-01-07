@@ -467,8 +467,8 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.warning("Reading total number of input val samples, cause no val_steps were specifed. This may take a while.")
         validation_steps = reader.num_examples(DataType.VAL) // global_batch_size
 
-    model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
-              callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
+    history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
+                        callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 
     results = model.evaluate(val_ds, steps=validation_steps)
 
@@ -482,7 +482,7 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("exporting saved model to %s" % saved_model_path)
         model.save(saved_model_path, save_format='tf')
 
-    return results, model
+    return {"evaluate": results, "history": history}, model
 
 
 def main():

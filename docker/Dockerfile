@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.1.0-gpu-py3
+FROM tensorflow/tensorflow:2.4.0-gpu-py3
 
 ADD requirements.txt requirements.txt
 
@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y libsm6 libxext6 libxrender-dev libyaml-
 RUN pip install -r requirements.txt
 
 # install tf addons
-RUN pip install tensorflow-addons==0.7.0
+RUN pip install tensorflow-addons==0.12.0
 RUN apt-get install -y fish tmux curl htop screen
 
 WORKDIR /root

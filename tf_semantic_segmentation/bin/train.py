@@ -475,7 +475,7 @@ def train_test_model(args, hparams=None, reporter=None):
     # saved model export
     saved_model_path = os.path.join(args.logdir, 'saved_model', str(args.saved_model_version))
 
-    if os.path.exists(saved_model_path):
+    if os.path.exists(saved_model_path) and not args.no_export_saved_model:
         shutil.rmtree(saved_model_path)
 
     if not args.no_export_saved_model:

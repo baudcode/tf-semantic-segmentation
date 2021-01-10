@@ -60,6 +60,7 @@ def get_args(args=None):
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('-logdir', '--logdir', default=None, help='log dir (where the tensorboard log files and saved models go)')
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
+    parser.add_argument('-no_eval', '--no_evaluate', action='store_true', help='evaluates after training completes on the validation set')
 
     parser.add_argument('-e', '--epochs', default=10, type=int, help='number of epochs')
     parser.add_argument('-ti', '--time_it', default=False, action='store_true', help='adds timing callback to measure images/sec and sec/batch')
@@ -470,7 +471,10 @@ def train_test_model(args, hparams=None, reporter=None):
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
                         callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 
-    results = model.evaluate(val_ds, steps=validation_steps)
+    if not args.no_evaluate:
+        results = model.evaluate(val_ds, steps=validation_steps)
+    else:
+        results = None
 
     # saved model export
     saved_model_path = os.path.join(args.logdir, 'saved_model', str(args.saved_model_version))

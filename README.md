@@ -113,7 +113,7 @@ pip install tf-semantic-segmentation
 tensorboard --logdir=logs/ --reload_multifile=true
 ```
 
-### On inbuild datasets (generator)
+### Train on inbuild datasets (generator)
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
@@ -123,7 +123,14 @@ python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
     --tensorboard_train_images --tensorboard_val_images
 ```
 
-### Using a fixed record path
+### Create a tfrecord from a dataset
+```bash
+
+# create a tfrecord from the toy dataset and resize to 128x128
+tf-semantic-segmentation-tfrecord-writer -d 'toy' -c /hdd/datasets/ -s '128,128'
+```
+
+### Train using a fixed record path
 
 ```bash
 python -m tf_semantic_segmentation.bin.train --record_dir=records/cityscapes-512x256-rgb/ \

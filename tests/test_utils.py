@@ -148,13 +148,17 @@ def test_get_random_image():
 
 
 def test_kill_and_start_tensorboard():
+    print("kill start...")
     thread = utils.kill_start_tensorboard('./', port=6006)
-    time.sleep(3.0)
-    utils.kill_process_by_port(6006)
+    print(thread.getName())
+    time.sleep(5.0)
+    print("kill process by port")
+    utils.kill(6006)
     thread.join()
 
+    print("kill start")
     thread = utils.kill_start_tensorboard('./', port=6006)
-    time.sleep(3.0)
+    time.sleep(5.0)
     utils.kill(6006)
     thread.join()
 

@@ -1,13 +1,14 @@
 from . import ColorMode
+from .. import utils
 
 import tensorflow as tf
 import numpy as np
 import multiprocessing
 
-resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad']
+resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad', 'patch']
 
 
-def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='tf'):
+def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='graph'):
     """
     Arguments:
 
@@ -20,22 +21,31 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     Returns:
     tuple (image, mask)
     """
-    if len(tf.shape(image)) == 2:
-        image = tf.expand_dims(image, axis=-1)
+    if mode == 'graph':
+        # len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2 seems to be a wierd hack when width and height
+        # are not defined
+        is2d = False
+        if len(tf.shape(image)) == 2 or (len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2):
+            image = tf.expand_dims(image, axis=-1)
+            is2d = True
 
-    if mode == 'tf':
-        if color_mode == ColorMode.RGB and tf.shape(image)[-1] == 1:
+        if color_mode == ColorMode.RGB and (tf.shape(image)[-1] == 1 or is2d):
             image = tf.image.grayscale_to_rgb(image)
 
         elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
             image = tf.image.rgb_to_grayscale(image)
-    else:
+
+    elif mode == 'eager':
+        if len(image.shape) == 2:
+            image = tf.expand_dims(image, axis=-1)
+        
         if color_mode == ColorMode.RGB and image.shape[-1] == 1:
             image = tf.image.grayscale_to_rgb(image)
 
         elif color_mode == ColorMode.GRAY and image.shape[-1] != 1:
             image = tf.image.rgb_to_grayscale(image)
-
+    else:
+        raise Exception("unknown mode %s" % mode)
     if size is not None:
         # make 3dim for tf.image.resize
         if mask is not None:
@@ -56,6 +66,10 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
             image = tf.image.resize_with_crop_or_pad(image, size[0], size[1])
             if mask is not None:
                 mask = tf.image.resize_with_crop_or_pad(mask, size[0], size[1])  # use nearest for no interpolation
+        
+        elif resize_method == 'patch':
+            image, mask = select_patch(image, mask, size, color_mode)
+        
         else:
             raise Exception("unknown resize method %s" % resize_method)
 
@@ -66,7 +80,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='tf'):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='graph'):
 
     @tf.function
     def map_fn(image, mask, num_classes):
@@ -90,7 +104,34 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='t
     return map_fn
 
 
-def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
+def select_patch(image, mask, patch_size, color_mode):
+    """
+    Select a random patch on image, mask at the same location
+
+    Args:
+        image (tf.Tensor): Tensor for the input image of shape (h x w x (1 or 3)), dtype: float32
+        mask (tf.Tensor): Tensor for the mask image of shape (h x w x 1), dtype: uint8
+        patch_size (tuple): Size of patch (height, width)
+    Returns:
+        Tuple[tf.Tensor, tf.Tensor]: Tuple of tensors (image, mask) with shape (patch_size[0], patch_size[1], 3)
+    """
+    image = tf.image.convert_image_dtype(image, tf.uint8)
+    if color_mode == ColorMode.RGB:
+        # use alpha channel for mask
+        concat = tf.concat([image, mask], axis=-1)
+        patches = tf.image.random_crop(concat, size=[patch_size[0], patch_size[1], 4])
+        patch_image = tf.image.convert_image_dtype(patches[:, :, :3], tf.float32)
+        patch_mask = tf.expand_dims(patches[:, :, 3], axis=-1)
+    else:
+        stack = tf.stack([image, mask], axis=0)
+        patches = tf.image.random_crop(stack, size=[2, patch_size[0], patch_size[1], 1])
+        patch_image = patches[0]
+        patch_mask = patches[1]
+    
+    return (patch_image, patch_mask)
+
+
+def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
 
     if num_workers > 1:
         dataset = dataset.shard(num_workers, worker_index)
@@ -101,25 +142,32 @@ def prepare_dataset(dataset, batch_size, num_threads=8, buffer_size=200, repeat=
     if take > 0:
         dataset = dataset.take(take)
 
-    if cache:
-        dataset = dataset.cache()
+    if shuffle:  # shuffle before repeat to have the maximum randomness
+        dataset = dataset.shuffle(buffer_size=buffer_size, reshuffle_each_iteration=True)
 
     if repeat > 0:
         dataset = dataset.repeat(repeat)
     else:
         dataset = dataset.repeat()
+    
+    # `tf.data.Options()` object then setting `options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA`
+    if utils.tf_version_gt_eq('2.4'):
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
+        dataset = dataset.with_options(options)
 
-    if shuffle:
-        dataset = dataset.shuffle(buffer_size=buffer_size)
 
     dataset = dataset.batch(batch_size)
 
-    if augment_fn:
+    if cache:  # cache after batching
+        dataset = dataset.cache()
+
+    if augment_fn:  # memory intensive task
         dataset = dataset.map(augment_fn, num_parallel_calls=multiprocessing.cpu_count())
 
-    # dataset = dataset.prefetch(buffer_size=buffer_size)
-    if prefetch:
+    if prefetch:  # prefetch at the end
         dataset = dataset.prefetch(buffer_size // batch_size)
+
     return dataset
 
 

@@ -15,7 +15,7 @@ import threading
 import io
 import PIL.Image
 import base64
-
+import tensorflow as tf
 
 from functools import reduce
 from .settings import logger
@@ -23,6 +23,13 @@ from .settings import logger
 
 class ExtractException(Exception):
     pass
+
+def tf_version_gt_eq(version):
+    # checks if the tensorflow version is greater or equal to `version`
+    for r_part, part in zip(map(int, version.split(".")), map(int, tf.__version__.split("."))):
+        if r_part > part:
+            return False
+    return True
 
 
 def run(cmd, block=True):
@@ -59,7 +66,7 @@ def kill_start_tensorboard(logdir, port=6006):
 
     def target():
         try:
-            kill_process_by_port(port)
+            kill(port)
         except Exception as e:
             logger.warning("could not kill tensorboard, %s" % str(e))
         run(['tensorboard', '--logdir=%s' % logdir, '--port=%d' % port])
@@ -69,18 +76,17 @@ def kill_start_tensorboard(logdir, port=6006):
     return t
 
 
-def kill_process_by_port(port, protocol='tcp'):
-    run([
-        'fuser', '-n', protocol, '-k', str(port)
-    ], block=True)
-
-
-def kill(port):
-    pid = str(subprocess.check_output(['lsof', '-t', '-i:6006']), 'utf-8')[:-1]
+def kill(port: int):
+    try:
+        pid = str(subprocess.check_output(['lsof', '-t', '-i:%d' % port]), 'utf-8')[:-1]
+    except subprocess.CalledProcessError:
+        logger.warn("no process on port %d" % port)
+        return
 
     if pid:
         pid = int(pid)
 
+    logger.info("kill process with pid %d on port %d" % (pid, port))
     cmd = ['kill', '%d' % pid]
     return call_for_ret_code(cmd)
 
@@ -384,8 +390,10 @@ def get_now_datetime():
 def format_datetime(d, mode="postgis"):
     if mode == 'postgis':
         return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    if mode == 'filename':
+    elif mode == 'filename':
         return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    else:
+        return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def ndarray_to_base64(img):
@@ -406,13 +414,17 @@ def get_size(path='.'):
 
     return total_size
 
+def get_gpu_stats():
+    cmd = ["nvidia-smi", 
+        "--query-gpu=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used",
+        "--format=csv"]
+    headers = "timestamp name pci.bus_id driver_version pstate pcie.link.gen.max pcie.link.gen.current temperature.gpu utilization.gpu utilization.memory memory.total memory.free memory.used".split(" ")
+    outputs = str(subprocess.check_output(cmd), 'utf-8')
+    values = outputs.split("\n")[-2].split(",")
+    values = list(map(lambda x: x.strip(), values))
+    return dict(zip(headers, values))
+
 
 if __name__ == "__main__":
-    import time
-
-    logdir = os.path.abspath('logs/')
-    kill_start_tensorboard(logdir)
-
-    while 1:
-        print("staying alive")
-        time.sleep(1)
+    from pprint import pprint
+    pprint(get_gpu_stats())

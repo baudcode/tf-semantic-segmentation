@@ -14,7 +14,7 @@ def test_dataset_structure(dataset):
     assert(ds.num_classes == 2)
     assert(all(map(lambda x: x in ds.raw().keys(), DataType.get())))
 
-    image, mask = ds.get_random_example()
+    image, mask = ds.get_random_item()
     assert(image.shape == (64, 64, 3) and image.dtype == 'uint8')
     assert(mask.shape == (64, 64) and mask.dtype == 'uint8')
     assert(mask.max() == 1)

@@ -171,7 +171,6 @@ def ensemble_prediction(models, image, host="localhost", port=8501):
         input_name = model["input_name"] if "input_name" in model else "input_1"
         p = predict(image, host=host, model_name=model['name'], port=port, input_name=input_name, version=version)
         predictions.append(np.asarray(p))
-
     ensemble = np.mean(predictions, axis=0)
     return ensemble, predictions
 
@@ -180,11 +179,13 @@ def ensemble_inference(models, image, host="localhost", port=8501, threshold=0.5
 
     ensemble, predictions = ensemble_prediction(models, image, host=host, port=port)
 
+    # for ensemble
     if ensemble.shape[-1] == 1 and threshold > 0:
         ensemble = threshold_predictions(ensemble, threshold=threshold)
     elif ensemble.shape[-1] > 1:
         ensemble = np.expand_dims(np.argmax(ensemble, axis=-1), axis=-1)
 
+    # for predictions
     if ensemble.shape[-1] == 1 and threshold > 0:
         predictions = [threshold_predictions(p, threshold=threshold) for p in predictions]
     elif ensemble.shape[-1] > 1:

@@ -1,0 +1,21 @@
+site_name: TF Semantic Segmentation Documentation
+theme:
+  name: material
+repo_name: baudcode/tf-semantic-segmentation
+repo_url: https://github.com/baudcode/tf-semantic-segmentation
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/baudcode
+markdown_extensions:
+  - admonition
+nav:
+  - Introduction: 'index.md'
+  - Usage: 'usage.md'
+  - Datasets: 'datasets.md'
+  - Models: 'models.md'
+  - Metrics and Losses: "metrics.md"
+  - Custom Activations: "activations.md"
+  - Predict and Ensemble: "predict.md"
+  - TFLite: 'tflite.md'
+  - Docker: 'docker.md'

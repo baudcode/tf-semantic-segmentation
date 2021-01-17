@@ -25,7 +25,7 @@ from tensorflow.keras.layers import GlobalMaxPooling2D
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K
-from tensorflow.keras.utils import get_source_inputs, get_file, convert_all_kernels_in_model
+from tensorflow.keras.utils import get_source_inputs, get_file
 from .utils import _obtain_input_shape
 
 WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.2/resnet50_weights_tf_dim_ordering_tf_kernels.h5'
@@ -269,5 +269,21 @@ def ResNet50(include_top=True, weights='imagenet',
     return model
 
 
+def resnet50(input_shape=(512, 512, 3), encoder_weights='imagenet') -> Model:
+    model = ResNet50(input_shape=input_shape, include_top=False, weights=encoder_weights)
+
+    for l in model.layers:
+        l.trainable = True
+
+    conv1 = model.get_layer("activation_1").output
+    conv2 = model.get_layer("activation_10").output
+    conv3 = model.get_layer("activation_22").output
+    conv4 = model.get_layer("activation_39").output
+    conv5 = model.get_layer("activation_40").output
+    conv6 = model.get_layer("activation_48").output
+
+    return Model(inputs=model.inputs, outputs=[conv1, conv2, conv3, conv4, conv5, conv6])
+
+
 if __name__ == "__main__":
-    ResNet50().summary()
+    resnet50().summary()

@@ -3,11 +3,25 @@
 [![Build Status](https://travis-ci.org/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.org/baudcode/tf-semantic-segmentation)
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
-[![latest tag](https://img.shields.io/github/v/tag/baudcode/tf-semantic-segmentation)]()
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-)
+[![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://tf-semantic-segmentation.readthedocs.io/?badge=latest)
+
+### Quick Start
+See [GETTING_STARTED](#getting-started), or the [Colab Notebook](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-).
+
+Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.io/en/latest/).
+See upcoming features on our [roadmap](ROADMAP.md).
 
 ## Features
 
-- Datasets
+- Distributed Training on Multiple GPUs
+- Hyper Parameter Optimization using WandB
+- WandB Integration
+- Easily create TFRecord from Directory
+- Tensorboard visualizations
+- Ensemble inference
+
+#### Datasets
 
   - Ade20k
   - Camvid
@@ -22,24 +36,25 @@
   - ISIC2018
   - CVC-ClinicDB
 
-- Distributed Training on Multiple GPUs
-- Hyper Parameter Optimization using WandB
-- WandB Integration
-- Easily create TFRecord from Directory
-- Tensorboard visualizations
-- Ensemble inference
 
-- Models:
 
-  - Unet
-  - Erfnet
-  - MultiResUnet
+#### Models
+
+  
+  - [Unet](https://arxiv.org/abs/1505.04597)
+  - [Erfnet](https://arxiv.org/abs/1806.08522)
+  - [MultiResUnet](https://arxiv.org/abs/1902.04049)
+  - [PSP](https://arxiv.org/abs/1612.01105) (experimental)
+  - [FCN](https://arxiv.org/abs/1411.4038) (experimental)
+  - [NestedUnet (Unet++)](https://arxiv.org/abs/1807.10165) (experimental)
+  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007) (experimental)
   - SatelliteUnet
   - MobilenetUnet (unet with mobilenet encoder pre-trained on imagenet)
-  - unet_inception_resnet_v2 (unet with inception-resnet v2 encoder pre-trained on imagenet)
+  - InceptionResnetV2Unet (unet with inception-resnet v2 encoder pre-trained on imagenet)
   - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
+  - AttentionUnet
 
-- Losses:
+#### Losses
 
   - Catagorical Crossentropy
   - Binary Crossentropy
@@ -50,30 +65,32 @@
   - Focal
   - Focal + Tversky
 
-- Activations:
+#### Activations
 
   - mish
   - swish
   - relu6
 
-- Optimizers:
+#### Optimizers
 
   - Ranger
   - RAdam
 
-- Normalization
+#### Normalization
 
   - Instance Norm
   - Batch Norm
 
-- On the fly Augmentations
+#### On the fly Augmentations
 
   - flip left/right
   - flip up/down
   - rot 180
   - color
 
-## Requirements
+## [Getting Started](#getting-started)
+
+### Requirements
 
 ```shell
 sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
@@ -82,26 +99,25 @@ sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 #### Tensorflow (2.x) & Tensorflow Addons (optional)
 
 ```shell
-pip install tensorflow-gpu==2.1.0 --upgrade
-pip install tensorflow-addons==0.7.0 --upgrade
+pip install tensorflow-gpu==2.4.0 --upgrade
+pip install tensorflow-addons==0.12.0 --upgrade
 ```
 
-or
+### Installation
 
 ```shell
-pip install tensorflow-gpu==2.0.0 --upgrade
-pip install tensorflow-addons==0.6.0 --upgrade
+pip install tf-semantic-segmentation
 ```
 
-## Training
+### Run tensorboard
 
-### Hint: To see train/test/val images you have to start tensorboard like this
+- Hint: To see train/test/val images you have to start tensorboard like this
 
 ```bash
 tensorboard --logdir=logs/ --reload_multifile=true
 ```
 
-### On inbuild datasets (generator)
+### Train on inbuild datasets (generator)
 
 ```bash
 python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
@@ -111,7 +127,14 @@ python -m tf_semantic_segmentation.bin.train -ds 'tacobinary' -bs 8 -e 100 \
     --tensorboard_train_images --tensorboard_val_images
 ```
 
-### Using a fixed record path
+### Create a tfrecord from a dataset
+```bash
+
+# create a tfrecord from the toy dataset and resize to 128x128
+tf-semantic-segmentation-tfrecord-writer -d 'toy' -c /hdd/datasets/ -s '128,128'
+```
+
+### Train using a fixed record path
 
 ```bash
 python -m tf_semantic_segmentation.bin.train --record_dir=records/cityscapes-512x256-rgb/ \
@@ -221,6 +244,8 @@ There are the following addition arguments:
 - -s [--size] '$width,$height' (f.e. "512,512")
 - -rm [--resize_method] ('resize', 'resize_with_pad', 'resize_with_crop_or_pad)
 - cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
+
+
 
 ## Datasets
 

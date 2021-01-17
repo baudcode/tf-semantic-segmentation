@@ -23,6 +23,46 @@ import shutil
 import ast
 import inspect
 import types
+import logging
+import copy
+import tempfile
+
+
+def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], steps_per_epoch=-1):
+    
+    # reset loglevel to reduce printing
+    current_level = logger.level
+    logger.setLevel(logging.CRITICAL)
+    
+    current_bs = 0
+    _args = copy.deepcopy(args)
+    
+    # only test with steps and buffer at bare min
+    _args.validation_steps = 1
+    _args.steps_per_epoch = steps_per_epoch
+    _args.epochs = 1
+    _args.buffer_size = 10
+    _args.val_buffer_size = 1
+    
+    for batch_size in batch_sizes:
+        print("testing batch size %d on model %s" % (batch_size, _args.model))
+        try:
+            # try to train for 30 seconds
+            _args.batch_size = batch_size
+            _args.log_dir = tempfile.mkdtemp()
+            _ = train_test_model(_args)
+            
+            current_bs = batch_size
+            shutil.rmtree(_args.log_dir)
+        except tf.errors.ResourceExhaustedError as re:
+            shutil.rmtree(_args.log_dir)
+            break
+        except tf.errors.InternalError as ie:
+            shutil.rmtree(_args.log_dir)
+            break
+    
+    logger.setLevel(current_level)
+    return current_bs
 
 
 def get_args(args=None):
@@ -30,7 +70,12 @@ def get_args(args=None):
     color_modes = [int(cm) for cm in ColorMode]
 
     def str_list_type(x): return list(map(str, x.split(",")))
-    def dict_type(x): return ast.literal_eval(x)
+    def dict_type(x):
+        if type(x) == dict:
+            return x
+
+        return ast.literal_eval(x)
+
     def float_list_type(x): return list(map(float, x.split(",")))
     def int_list_type(x): return [] if x.strip() == "" else list(map(int, x.split(",")))
     def tuple_type(x): return tuple(list(map(int, x.split(","))))
@@ -60,15 +105,19 @@ def get_args(args=None):
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('-logdir', '--logdir', default=None, help='log dir (where the tensorboard log files and saved models go)')
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
+    parser.add_argument('-no_eval', '--no_evaluate', action='store_true', help='evaluates after training completes on the validation set')
 
     parser.add_argument('-e', '--epochs', default=10, type=int, help='number of epochs')
+    parser.add_argument('-ti', '--time_it', default=False, action='store_true', help='adds timing callback to measure images/sec and sec/batch')
+    parser.add_argument('-ti_freq', '--time_it_log_freq', default=50, type=int, help='(info) log after x batches')
     parser.add_argument('-bufsize', '--buffer_size', default=50, type=int, help='number of examples to prefetch for training')
     parser.add_argument('-valbufsize', '--val_buffer_size', default=25, type=int, help='number of examples to prefetch for validation')
     parser.add_argument('-valfreq', '--validation_freq', default=1, type=int, help='validate every x epochs')
     parser.add_argument('-log', '--log_level', default='INFO', type=str, choices=['DEBUG', "NOTSET", "INFO", "WARN", "ERROR", "CRITICAL"], help='log level during training')
     parser.add_argument('-rm', '--resize_method', default='resize', type=str, choices=['resize', 'resize_with_pad', 'resize_with_crop_or_pad'], help='image resize method (when --size is specified)')
     parser.add_argument('-args', '--model_args', default={}, type=dict_type, help='arguments to supply to the model, e.g. unet: {"downsampling_method": "conv"}')
-    parser.add_argument('-tpu', '--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
+    parser.add_argument('--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
+    parser.add_argument('--mixed_float16', action='store_true', help='use tf 2.1 feature to train a whole keras model on float16, REQUIRES TF 2.1')
 
     # wandb
     parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used')
@@ -85,6 +134,7 @@ def get_args(args=None):
     parser.add_argument('-rd', '--record_dir', default=None, help='if none, will be auto detected')
     parser.add_argument('-ro', '--record_options', default='GZIP', help='record compression options')
     parser.add_argument('-ds', '--dataset', default=None, choices=list(datasets_by_name.keys()), help='dataset to train on')
+    parser.add_argument('-ds_args', '--dataset_args', default={}, type=dict_type, help='args for the dataset to initialize')
     parser.add_argument('-rtag', '--record_tag', default=None, choices=list(google_drive_records_by_tag.keys()), help='record tag for auto downloading records')
     parser.add_argument('-dir', '--directory', default=None, help='training model on a directory containing images and masks')
     parser.add_argument('-aug', '--augmentations', default=[], type=any_of(preprocessing_ds.augmentation_methods),
@@ -136,6 +186,13 @@ def get_args(args=None):
     parser.add_argument('-es_mode', '--early_stopping_mode', default='min', type=str, help='early stopping mode')
     parser.add_argument('-es_monitor', '--early_stopping_monitor', default='val_loss', type=str, help='early stopping monitor metric/loss')
 
+    # lr finder
+    parser.add_argument('--find_lr', action='store_true', help='if specified, the learning rate finder runs')
+    parser.add_argument('-fminlr', "--find_lr_min_lr", default=1e-9, type=float, help='minimum lr used to find the learning rate')
+    parser.add_argument('-fmaxlr', "--find_lr_max_lr", default=1e-1, type=float, help='maxium lr used to find the learning rate')
+    parser.add_argument('-fbeta', "--find_lr_beta", default=1e-1, type=float, help='beta used for changing the lr during lr find')
+    parser.add_argument('-fstop', "--find_lr_stop_factor", default=4.0, type=float, help='beta used for changing the lr during lr find')
+
     # reduce lr on plateau
     parser.add_argument('--reduce_lr_on_plateau', action='store_true', help='if specified, do not add callback for reducing lr on plateau')
     parser.add_argument('-lr_patience', '--reduce_lr_patience', default=10, type=int, help='reduce lr on plateau patience in [epochs]')
@@ -167,13 +224,15 @@ def train_test_model(args, hparams=None, reporter=None):
     # allow growth to precent memory errors
     setup_devices()
 
+    logger.info("using tf version %s" % tf.__version__)
+
     logger.info("setting up callbacks")
-    callbacks = []
+    callbacks = args.callbacks if hasattr(args, 'callbacks') else []
 
     # setting up wandb
     if args.wandb_project:
         import wandb
-        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True)
+        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True, reinit=True)
         callbacks.append(wandb.keras.WandbCallback())
 
         if args.logdir is None:
@@ -244,17 +303,18 @@ def train_test_model(args, hparams=None, reporter=None):
 
     global_batch_size = args.batch_size * (len(args.gpus) if len(args.gpus) > 0 else 1)
 
-    # callbacks.append(kcallbacks.LambdaCallback(on_epoch_end=on_epoch_end))
-
     assert(args.record_dir is not None or args.dataset is not None or args.record_tag is not None or args.directory is not None)
 
     logger.info("setting up dataset")
+    ds = None  # will be used when in dataset mode
+
     if args.dataset or args.directory:
         if args.dataset and type(args.dataset) == str:
             cache_dir = get_cache_dir(args.data_dir, args.dataset)
-            ds = get_dataset_by_name(args.dataset, cache_dir)
+            ds = get_dataset_by_name(args.dataset, cache_dir, args.dataset_args)
         elif args.dataset:
             ds = args.dataset
+            cache_dir = get_cache_dir(args.data_dir, args.dataset.__class__.__name__)
         else:
             ds = DirectoryDataset(args.directory)
             cache_dir = args.directory
@@ -263,6 +323,7 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("using dataset %s with %d classes" % (ds.__class__.__name__, ds.num_classes))
 
         if not args.train_on_generator:
+
             logger.info("writing records")
 
             record_dir = os.path.join(cache_dir, 'records')
@@ -271,11 +332,14 @@ def train_test_model(args, hparams=None, reporter=None):
             writer = TFWriter(record_dir, options=args.record_options)
             writer.write(ds)
             writer.validate(ds)
+        else:
+            record_dir = None
 
         num_classes = ds.num_classes
     elif args.record_dir:
         if not os.path.exists(args.record_dir):
             raise Exception("cannot find record dir %s" % args.record_dir)
+
         record_dir = args.record_dir
         num_classes = TFReader(record_dir, options=args.record_options).num_classes
     elif args.record_tag:
@@ -283,6 +347,8 @@ def train_test_model(args, hparams=None, reporter=None):
         record_dir = os.path.join(args.data_dir, 'downloaded', record_tag)
         download_records(record_tag, record_dir)
         num_classes = TFReader(record_dir, options=args.record_options).num_classes
+    else:
+        raise Exception("cannot find either dataset/directory/record_dir or record_tag")
 
     if args.size and args.color_mode != ColorMode.NONE:
         input_shape = (args.size[0], args.size[1], 3 if args.color_mode == ColorMode.RGB else 1)
@@ -290,10 +356,24 @@ def train_test_model(args, hparams=None, reporter=None):
     elif args.train_on_generator:
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")
     else:
+        if record_dir is None:
+            raise Exception("record_dir cannot be None when trying to read record files")
+
         input_shape = TFReader(record_dir, options=args.record_options).input_shape
         input_shape = (input_shape[0], input_shape[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
     logger.info("input shape: %s" % str(input_shape))
+
+    try:
+        if args.mixed_float16:
+            logger.info("using mixed float16 precision, tf version >= 2.1 required")
+            policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
+            tf.keras.mixed_precision.experimental.set_policy(policy)
+        else:
+            tf.keras.mixed_precision.experimental.set_policy(None)
+
+    except Exception as e:
+        logger.error("cannot set mixed precision policy, exception: %s" % str(e))
 
     # set scale mask based on sigmoid activation
     scale_mask = args.final_activation == 'sigmoid'
@@ -336,7 +416,7 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
 
-        model = Model(model.input, Activation(args.final_activation)(model.output))
+        model = Model(model.input, Activation(args.final_activation, dtype='float32')(model.output))
         logger.info("output shape: %s" % model.output.shape)
         logger.info("input shape: %s" % model.input.shape)
 
@@ -354,8 +434,11 @@ def train_test_model(args, hparams=None, reporter=None):
         model.summary()
 
     if args.train_on_generator:
+        if ds is None:
+            raise Exception("Dataset cannot be None when training with generator")
         train_ds = convert2tfdataset(ds, DataType.TRAIN)
         val_ds = convert2tfdataset(ds, DataType.VAL)
+        reader = None  # no tfrecord reader
     else:
         logger.info("using tfreader to read record dir %s" % record_dir)
         reader = TFReader(record_dir, options=args.record_options)
@@ -367,7 +450,12 @@ def train_test_model(args, hparams=None, reporter=None):
     train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    augment_fn = None if len(args.augmentations) == 0 else preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
+    if len(args.augmentations) == 0:
+        augment_fn = None
+    else:
+        logger.info("applying augmentations %s" % str(args.augmentations))
+        augment_fn = preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
+
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
@@ -403,7 +491,7 @@ def train_test_model(args, hparams=None, reporter=None):
             test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
             test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
             test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), val_ds_images,
+            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
                                                                                 scaled_mask=scale_mask,
                                                                                 binary_threshold=args.binary_threshold,
                                                                                 update_freq=args.tensorboard_images_freq)
@@ -421,6 +509,16 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.warning("Reading total number of input samples, cause no steps were specifed. This may take a while.")
         steps_per_epoch = reader.num_examples(DataType.TRAIN) // global_batch_size
 
+    # add timing callback after steps per epoch is known
+    if args.time_it:
+        callbacks.append(custom_callbacks.TimingCallback(args.batch_size, steps_per_epoch * global_batch_size, log_interval=args.time_it_log_freq))
+
+    if args.find_lr:
+        find_lr_logdir = os.path.join(args.logdir, 'lr-finder')
+        callbacks.append(custom_callbacks.LRFinder(
+            model, steps_per_epoch, find_lr_logdir, args.epochs, args.find_lr_min_lr, args.find_lr_max_lr, args.find_lr_stop_factor, args.find_lr_beta
+        ))
+
     if args.validation_steps != -1:
         validation_steps = args.validation_steps
     elif args.train_on_generator:
@@ -429,22 +527,25 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.warning("Reading total number of input val samples, cause no val_steps were specifed. This may take a while.")
         validation_steps = reader.num_examples(DataType.VAL) // global_batch_size
 
-    model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
-              callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
+    history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
+                        callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 
-    results = model.evaluate(val_ds, steps=validation_steps)
+    if not args.no_evaluate:
+        results = model.evaluate(val_ds, steps=validation_steps)
+    else:
+        results = None
 
     # saved model export
     saved_model_path = os.path.join(args.logdir, 'saved_model', str(args.saved_model_version))
 
-    if os.path.exists(saved_model_path):
+    if os.path.exists(saved_model_path) and not args.no_export_saved_model:
         shutil.rmtree(saved_model_path)
 
     if not args.no_export_saved_model:
         logger.info("exporting saved model to %s" % saved_model_path)
         model.save(saved_model_path, save_format='tf')
 
-    return results, model
+    return {"evaluate": results, "history": history, 'callbacks': callbacks}, model
 
 
 def main():

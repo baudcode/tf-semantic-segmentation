@@ -10,6 +10,7 @@
 See [GETTING_STARTED](#getting-started), or the [Colab Notebook](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-).
 
 Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.io/en/latest/).
+See upcoming features on our [roadmap](ROADMAP.md).
 
 ## Features
 

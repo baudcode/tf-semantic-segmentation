@@ -39,13 +39,14 @@ Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.i
 
 #### Models
 
-  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007)
+  
   - [Unet](https://arxiv.org/abs/1505.04597)
-  - [PSP](https://arxiv.org/abs/1612.01105)
-  - [FCN](https://arxiv.org/abs/1411.4038)
   - [Erfnet](https://arxiv.org/abs/1806.08522)
   - [MultiResUnet](https://arxiv.org/abs/1902.04049)
-  - [NestedUnet (Unet++)](https://arxiv.org/abs/1807.10165)
+  - [PSP](https://arxiv.org/abs/1612.01105) (experimental)
+  - [FCN](https://arxiv.org/abs/1411.4038) (experimental)
+  - [NestedUnet (Unet++)](https://arxiv.org/abs/1807.10165) (experimental)
+  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007) (experimental)
   - SatelliteUnet
   - MobilenetUnet (unet with mobilenet encoder pre-trained on imagenet)
   - InceptionResnetV2Unet (unet with inception-resnet v2 encoder pre-trained on imagenet)

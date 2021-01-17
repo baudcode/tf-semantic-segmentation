@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import wandb
 import imageio
+import tempfile
 import time
 from tensorflow.keras import backend as K
 
@@ -197,3 +198,150 @@ class SaveBestWeights(tf.keras.callbacks.Callback):
             self.base_model.save_weights(self.weights_path)
             if self.verbose:
                 print("[Epoch %d] saving base model weights to %s" % (epoch, self.weights_path))
+
+
+
+class LRFinder(tf.keras.callbacks.Callback):
+    
+
+    @property
+    def logger_str(self):
+        return "[%s]" % self.__class__.__name__
+
+    def __init__(self, model, steps_per_epoch, logdir, epochs: int = 5, start_lr: float = 2e-5, end_lr: float = 2e-1, stop_factor: int = 4, beta: float = 0.98, sma: int = 10):
+        super(LRFinder, self).__init__()
+        self.model = model
+        self.stop_factor = stop_factor
+        self.beta = beta
+        self.epochs = epochs
+        self.steps_per_epoch = steps_per_epoch
+        self.start_lr = start_lr
+        self.summary_writer = tf.summary.create_file_writer(logdir)
+        self.end_lr = end_lr
+        self.sma = sma
+        self.reset()
+    
+    def plot_loss(self, skip_begin=10, skipp_end=1, title="Loss"):
+        import matplotlib.pyplot as plt
+
+        # grab the learning rate and losses values to plot
+        lrs = self.lrs[skip_begin:-skipp_end]
+        losses = self.losses[skip_begin:-skipp_end]
+
+        plt.figure(figsize=(25, 5))
+        plt.plot(lrs, losses)
+        plt.xscale("log")
+        plt.xlabel("Learning Rate (Log Scale)")
+        plt.ylabel("Loss")
+
+        if title != "":
+            plt.title(title)
+
+        plt.show()
+
+    def plot_loss_change(self, sma=10, skip_begin=10, skip_end=5, y_lim=None, title='Loss Change Rate'):
+        import matplotlib.pyplot as plt
+        derivatives = self.get_derivatives(sma)[skip_begin:-skip_end]
+        lrs = self.lrs[skip_begin:-skip_end]
+        plt.figure(figsize=(25, 5))
+        plt.title(title)
+        plt.ylabel("Rate of loss change")
+        plt.xlabel("Learning rate (log scale)")
+        plt.plot(lrs, derivatives)
+        plt.xscale('log')
+        plt.ylim(y_lim)
+        plt.show()
+    
+    def print_best_loss_change_rate(self, sma=10, skip_begin=10, skip_end=5):
+        derivatives = self.get_derivatives(sma)[skip_begin:-skip_end]
+        derivatives = np.asarray(derivatives)
+        min_idxs = np.where(derivatives == np.amin(derivatives))[0]
+        lrs = np.asarray(self.lrs)
+
+        logger.info("%s best loss rate change: %.4f" % (self.logger_str, np.amin(derivatives)))
+        logger.info("%s loss changed from %.5f to %.5f" % (self.logger_str, self.losses[min_idxs[0] - sma], self.losses[min_idxs[0]]))
+        logger.info("%s lr range [%.6f, %.6f]" % (self.logger_str, lrs[min_idxs[0] - sma], lrs[min_idxs[0]]))
+
+
+    
+    def get_derivatives(self, sma):
+        assert sma >= 1
+        derivatives = [0] * sma
+        for i in range(sma, len(self.lrs)):
+            derivatives.append((self.losses[i] - self.losses[i - sma]) / sma)
+        return derivatives
+    
+    def reset(self):
+        self.lrs = []
+        self.losses = []
+        self.avg_loss = 0
+        self.best_loss = 1e9
+        self.num = 0
+        
+        self.num_updates = self.epochs * self.steps_per_epoch
+        self.lr_mult =  (self.end_lr / self.start_lr) ** (1.0 / self.num_updates)
+
+        logger.info("%s lr multipier is: %f" % (self.logger_str, self.lr_mult))
+        logger.info("%s setting initial lr to %f" % (self.logger_str, self.start_lr))
+
+        K.set_value(self.model.optimizer.lr, self.start_lr)
+        with self.summary_writer.as_default():
+            tf.summary.scalar('lr-finder/lr', self.start_lr, step=0)
+
+
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.plot_loss()
+        self.plot_loss_change()
+        self.print_best_loss_change_rate()
+
+    def on_batch_end(self, batch, logs={}):
+        # grab the current learning rate and add log it to the list of
+        # learning rates that we've tried
+        lr = K.get_value(self.model.optimizer.lr)
+        self.lrs.append(lr)
+
+        # grab the loss at the end of this batch, increment the total
+        # number of batches processed, compute the average average
+        # loss, smooth it, and update the losses list with the
+        # smoothed value
+        
+        l = logs["loss"]
+        self.num += 1
+        
+        # update smoothed average loss
+        self.avg_loss = (self.beta * self.avg_loss) + ((1 - self.beta) * l)
+        smooth = self.avg_loss / (1 - (self.beta ** self.num))
+        
+        self.losses.append(smooth)
+
+        # compute the maximum loss stopping factor value
+        stop_loss = self.stop_factor * self.best_loss
+
+        # check to see whether the loss has grown too large
+        if self.num > 1 and smooth > stop_loss:
+            # stop returning and return from the method
+            self.model.stop_training = True
+            return
+
+        # check to see if the best loss should be updated
+        if self.num == 1 or smooth < self.best_loss:
+            self.best_loss = smooth
+            logger.info("%s best loss: %.5f; lr %.6f; avg_loss: %.5f" % (self.logger_str, self.best_loss, lr, self.avg_loss))
+
+        # increase the learning rate
+        lr *= self.lr_mult
+
+        with self.summary_writer.as_default():
+            tf.summary.scalar('lr-finder/lr', lr, step=self.num)
+            tf.summary.scalar('lr-finder/best-loss', self.best_loss, step=self.num)
+            tf.summary.scalar('lr-finder/avg-loss', self.avg_loss, step=self.num)
+
+            if len(self.losses) >= self.sma:
+                deriv = (self.losses[self.num - 1] - self.losses[self.num - self.sma - 1]) / self.sma
+                tf.summary.scalar('lr-finder/rate-loss-change', deriv, step=self.num)
+
+
+
+        logger.info("%s set lr to %.6f" % (self.logger_str, lr))
+        K.set_value(self.model.optimizer.lr, lr)

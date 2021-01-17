@@ -140,6 +140,13 @@ def get_args(args=None):
     parser.add_argument('-es_mode', '--early_stopping_mode', default='min', type=str, help='early stopping mode')
     parser.add_argument('-es_monitor', '--early_stopping_monitor', default='val_loss', type=str, help='early stopping monitor metric/loss')
 
+    # lr finder
+    parser.add_argument('--find_lr', action='store_true', help='if specified, the learning rate finder runs')
+    parser.add_argument('-fminlr', "--find_lr_min_lr", default=1e-9, type=float, help='minimum lr used to find the learning rate')
+    parser.add_argument('-fmaxlr', "--find_lr_max_lr", default=1e-1, type=float, help='maxium lr used to find the learning rate')
+    parser.add_argument('-fbeta', "--find_lr_beta", default=1e-1, type=float, help='beta used for changing the lr during lr find')
+    parser.add_argument('-fstop', "--find_lr_stop_factor", default=4.0, type=float, help='beta used for changing the lr during lr find')
+
     # reduce lr on plateau
     parser.add_argument('--reduce_lr_on_plateau', action='store_true', help='if specified, do not add callback for reducing lr on plateau')
     parser.add_argument('-lr_patience', '--reduce_lr_patience', default=10, type=int, help='reduce lr on plateau patience in [epochs]')
@@ -460,6 +467,12 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.time_it:
         callbacks.append(custom_callbacks.TimingCallback(args.batch_size, steps_per_epoch * global_batch_size, log_interval=args.time_it_log_freq))
 
+    if args.find_lr:
+        find_lr_logdir = os.path.join(args.logdir, 'lr-finder')
+        callbacks.append(custom_callbacks.LRFinder(
+            model, steps_per_epoch, find_lr_logdir, args.epochs, args.find_lr_min_lr, args.find_lr_max_lr, args.find_lr_stop_factor, args.find_lr_beta
+        ))
+
     if args.validation_steps != -1:
         validation_steps = args.validation_steps
     elif args.train_on_generator:
@@ -486,7 +499,7 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("exporting saved model to %s" % saved_model_path)
         model.save(saved_model_path, save_format='tf')
 
-    return {"evaluate": results, "history": history}, model
+    return {"evaluate": results, "history": history, 'callbacks': callbacks}, model
 
 
 def main():

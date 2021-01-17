@@ -49,7 +49,7 @@ datasets_by_name = {
 }
 
 
-def get_cache_dir(data_dir, name):
+def get_cache_dir(data_dir: str, name: str) -> str:
     if "taco" in name.lower():
         cache_dir = os.path.join(data_dir, 'taco')
     elif "cub2002011" in name.lower():
@@ -64,9 +64,9 @@ def get_cache_dir(data_dir, name):
     return cache_dir
 
 
-def get_dataset_by_name(name, cache_dir) -> Dataset:
+def get_dataset_by_name(name: str, cache_dir: str, args: dict = {}) -> Dataset:
     if name in datasets_by_name.keys():
-        return datasets_by_name[name](cache_dir)
+        return datasets_by_name[name](cache_dir, **args)
     else:
         raise Exception("could not find dataset %s" % name)
 

@@ -23,6 +23,45 @@ import shutil
 import ast
 import inspect
 import types
+import logging
+import copy
+import tempfile
+
+def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], steps_per_epoch=-1):
+    
+    # reset loglevel to reduce printing
+    current_level = logger.level
+    logger.setLevel(logging.CRITICAL)
+    
+    current_bs = 0
+    _args = copy.deepcopy(args)
+    
+    # only test with steps and buffer at bare min
+    _args.validation_steps = 1
+    _args.steps_per_epoch = steps_per_epoch
+    _args.epochs = 1
+    _args.buffer_size = 10
+    _args.val_buffer_size = 1
+    
+    for batch_size in batch_sizes:
+        print("testing batch size %d on model %s" % (batch_size, _args.model))
+        try:
+            # try to train for 30 seconds
+            _args.batch_size = batch_size
+            _args.log_dir = tempfile.mkdtemp()
+            _ = train_test_model(_args)
+            
+            current_bs = batch_size
+            shutil.rmtree(_args.log_dir)
+        except tf.errors.ResourceExhaustedError as re:
+            shutil.rmtree(_args.log_dir)
+            break
+        except tf.errors.InternalError as ie:
+            shutil.rmtree(_args.log_dir)
+            break
+    
+    logger.setLevel(current_level)
+    return current_bs
 
 
 def get_args(args=None):
@@ -30,7 +69,12 @@ def get_args(args=None):
     color_modes = [int(cm) for cm in ColorMode]
 
     def str_list_type(x): return list(map(str, x.split(",")))
-    def dict_type(x): return ast.literal_eval(x)
+    def dict_type(x):
+        if type(x) == dict:
+            return x
+
+        return ast.literal_eval(x)
+
     def float_list_type(x): return list(map(float, x.split(",")))
     def int_list_type(x): return [] if x.strip() == "" else list(map(int, x.split(",")))
     def tuple_type(x): return tuple(list(map(int, x.split(","))))
@@ -89,6 +133,7 @@ def get_args(args=None):
     parser.add_argument('-rd', '--record_dir', default=None, help='if none, will be auto detected')
     parser.add_argument('-ro', '--record_options', default='GZIP', help='record compression options')
     parser.add_argument('-ds', '--dataset', default=None, choices=list(datasets_by_name.keys()), help='dataset to train on')
+    parser.add_argument('-ds_args', '--dataset_args', default={}, type=dict_type, help='args for the dataset to initialize')
     parser.add_argument('-rtag', '--record_tag', default=None, choices=list(google_drive_records_by_tag.keys()), help='record tag for auto downloading records')
     parser.add_argument('-dir', '--directory', default=None, help='training model on a directory containing images and masks')
     parser.add_argument('-aug', '--augmentations', default=[], type=any_of(preprocessing_ds.augmentation_methods),
@@ -265,7 +310,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.dataset or args.directory:
         if args.dataset and type(args.dataset) == str:
             cache_dir = get_cache_dir(args.data_dir, args.dataset)
-            ds = get_dataset_by_name(args.dataset, cache_dir)
+            ds = get_dataset_by_name(args.dataset, cache_dir, args.dataset_args)
         elif args.dataset:
             ds = args.dataset
             cache_dir = get_cache_dir(args.data_dir, args.dataset.__class__.__name__)

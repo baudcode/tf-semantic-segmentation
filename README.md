@@ -87,7 +87,9 @@ Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.i
   - rot 180
   - color
 
-## Requirements
+## [Getting Started](#getting-started)
+
+### Requirements
 
 ```shell
 sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
@@ -100,13 +102,13 @@ pip install tensorflow-gpu==2.4.0 --upgrade
 pip install tensorflow-addons==0.12.0 --upgrade
 ```
 
-## Installation
+### Installation
 
 ```shell
 pip install tf-semantic-segmentation
 ```
 
-## [Getting Started](#getting-started)
+### Run tensorboard
 
 - Hint: To see train/test/val images you have to start tensorboard like this
 

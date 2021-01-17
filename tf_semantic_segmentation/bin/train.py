@@ -27,6 +27,7 @@ import logging
 import copy
 import tempfile
 
+
 def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], steps_per_epoch=-1):
     
     # reset loglevel to reduce printing

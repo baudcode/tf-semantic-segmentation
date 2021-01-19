@@ -58,6 +58,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         super(PredictionCallback, self).__init__()
         self.generator = generator
         self.summary_writer = tf.summary.create_file_writer(logdir)
+        self.logdir = logdir
         self.scaled_mask = scaled_mask
         self.binary_threshold = binary_threshold
         self._model = model
@@ -101,6 +102,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             if not self.scaled_mask:
                 pred_batch = np.argmax(pred_batch, axis=-1).astype(np.float32)
                 target_batch = np.argmax(target_batch, axis=-1).astype(np.float32)
+                pred_batch = (pred_batch * 255. / (self.num_classes - 1)).astype(np.uint8)
 
                 # reshape, that add_images works
                 pred_batch = np.expand_dims(pred_batch, axis=-1)
@@ -108,6 +110,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             else:
                 pred_batch[pred_batch > self.binary_threshold] = 1.0
                 pred_batch[pred_batch <= self.binary_threshold] = 0.0
+                pred_batch = (pred_batch * 255.).astype(np.uint8)
 
             # simple
             # intersection = np.logical_or(target_batch, pred_batch).astype(np.float32)
@@ -121,6 +124,9 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             add_images('targets', target_batch)
             add_images('predictions', pred_batch)
 
+    @property
+    def logdir_mode(self):
+        return self.logdir.split("/")[-1]
 
 def _get_numpy(tensor):
     try:
@@ -143,11 +149,11 @@ class EpochPredictionCallback(PredictionCallback):
             epoch = epoch + 1
 
             # log time for performance tests
-            logger.info("time per epoch: %s, avg time per epoch: %s" %
+            logger.debug("time per epoch: %s, avg time per epoch: %s" %
                         (get_time_diff_str(self.epoch_start_time, et), get_time_diff_str(self.start_time, et, period=epoch)))
 
         if epoch % self.update_freq == 0:
-            logger.debug("logging images to tensorboard, epoch=%d" % epoch)
+            logger.info("logging images to tensorboard, epoch=%d, mode=%s" % (epoch, self.logdir_mode))
 
             for input_batch, target_batch in self.generator:
                 self._log(_get_numpy(input_batch), _get_numpy(target_batch), epoch)

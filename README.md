@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/baudcode/tf-semantic-segmentation.svg?branch=master)](https://travis-ci.org/baudcode/tf-semantic-segmentation)
 [![PyPI Status Badge](https://badge.fury.io/py/tf-semantic-segmentation.svg)](https://pypi.org/project/tf-semantic-segmentation/)
 [![codecov](https://codecov.io/gh/baudcode/tf-semantic-segmentation/branch/dev/graph/badge.svg)](https://codecov.io/gh/baudcode/tf-semantic-segmentation)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/baudcode/tf-semantic-segmentation/blob/master/examples/Demo.ipynb)
 [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://tf-semantic-segmentation.readthedocs.io/?badge=latest)
 
 ### Quick Start

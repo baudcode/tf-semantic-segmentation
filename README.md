@@ -7,7 +7,7 @@
 [![Documentation Status](https://readthedocs.org/projects/ansicolortags/badge/?version=latest)](http://tf-semantic-segmentation.readthedocs.io/?badge=latest)
 
 ### Quick Start
-See [GETTING_STARTED](#getting-started), or the [Colab Notebook](https://colab.research.google.com/drive/1xBH4WxhJ7TlnC7pck7ifLjo3NrdYmug-).
+See [GETTING_STARTED](#getting-started), or the [Colab Notebook](https://colab.research.google.com/github/baudcode/tf-semantic-segmentation/blob/master/examples/Demo.ipynb).
 
 Learn more at our [documentation](https://tf-semantic-segmentation.readthedocs.io/en/latest/).
 See upcoming features on our [roadmap](ROADMAP.md).

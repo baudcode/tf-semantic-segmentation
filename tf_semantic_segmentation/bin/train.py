@@ -176,7 +176,7 @@ def get_args(args=None):
     parser.add_argument('--tensorboard_test_images', action='store_true', help='show test images in tensorboard/wandb')
     parser.add_argument('--tensorboard_train_images_update_batch_freq', type=int, default=-1, help='show train images every n batch images in tensorboard/wandb. If -1, no images will be logged')
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=2, help='number of images displayed in tensorboard')
-    parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images')
+    parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images [only used for test/val]')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
     parser.add_argument('-tb_uf', '--tensorboard_update_freq', default='batch', type=str, choices=['batch', 'epoch'], help='update frequency [batch or epoch] of tensorboard')
 

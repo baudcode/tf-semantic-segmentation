@@ -12,6 +12,8 @@
 - [ ] New datasets
     - [APDrawing](https://cg.cs.tsinghua.edu.cn/people/~Yongjin/APDrawingDB.zip)
 - [ ] Testing current experimental models
+- [ ] yaml config files for training models
+
 ## v0.5.0
 
 - [ ] performance metrics
@@ -19,6 +21,12 @@
     - maximum batch size
 - [ ] model comparisons with paper results on PascalVoc
 - [ ] new models
-    - HRNET
+    - [HRNET](https://arxiv.org/abs/1908.07919)
 - [ ] learnng rate schedulers
     - CyclicLR
+- [ ] Stochastic Weight Averaging
+
+## v0.6.0
+
+- [ ] configure models in more detail
+- [ ] add blur pooling

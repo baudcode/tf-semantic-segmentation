@@ -16,6 +16,10 @@ class APDrawing(Dataset):
         super(APDrawing, self).__init__(cache_dir)
         self.train_val_split = train_val_split
 
+    @property
+    def labels(self):
+        return ['fg', 'bg']
+
     def raw(self):
         extract_dir = download_and_extract(self.url, self.cache_dir)
         trainset = get_files(os.path.join(extract_dir, 'APDrawingDB/data/train/'), extensions=['png'])

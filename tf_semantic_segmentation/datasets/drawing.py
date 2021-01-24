@@ -1,5 +1,5 @@
 #
-from . import Dataset, DataType
+from .dataset import Dataset, DataType
 from ..utils import download_and_extract, get_files
 from .utils import get_split_from_list
 import os

@@ -20,9 +20,13 @@ def write_records_from_directory(directory, record_dir, size=None, color_mode=Co
 
 
 def write_records_from_dataset_name(dataset, data_dir, record_dir=None, size=None, color_mode=ColorMode.NONE,
-                                    resize_method='resize', num_examples_per_record=100, overwrite=False):
+                                    resize_method='resize', num_examples_per_record=100, overwrite=False, data_dir_as_cache=False):
 
-    cache_dir = get_cache_dir(data_dir, dataset.lower())
+    if data_dir_as_cache:
+        cache_dir = data_dir
+    else:
+        cache_dir = get_cache_dir(data_dir, dataset.lower())
+
     ds = get_dataset_by_name(dataset, cache_dir)
 
     # write records
@@ -66,6 +70,7 @@ def main():
     parser.add_argument('-cm', '--color_mode', default=ColorMode.NONE, type=int)
 
     parser.add_argument('-o', '--overwrite', action='store_true')
+    parser.add_argument('-ddac', '--data_dir_as_cache', action='store_true')
     args = parser.parse_args()
 
     if args.directory is None and args.dataset is None:
@@ -74,7 +79,7 @@ def main():
     if args.dataset:
         assert(args.data_dir is not None), "data_dir argument is required"
         write_records_from_dataset_name(args.dataset, args.data_dir, args.record_dir, args.size, args.color_mode, args.resize_method,
-                                        args.num_examples_per_record, args.overwrite)
+                                        args.num_examples_per_record, args.overwrite, args.data_dir_as_cache)
     else:
         write_records_from_directory(args.directory, args.record_dir, args.size, args.color_mode, args.resize_method,
                                      args.num_examples_per_record, args.overwrite)

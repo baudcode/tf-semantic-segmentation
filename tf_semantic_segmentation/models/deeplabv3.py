@@ -40,7 +40,7 @@ def atrous_spatial_pyramid_pooling(x, depth=256, norm='batch'):
     return y
 
 
-def deeplabv3(input_shape=(512, 512, 3), num_classes=2, encoder_weights='imagenet'):
+def deeplabv3(input_shape=(512, 512, 3), num_classes=2, encoder_weights='imagenet') -> Model:
 
     base_model = resnet50(input_shape=input_shape, encoder_weights=encoder_weights)
 

@@ -8,6 +8,8 @@ from .nested_unet import nested_unet
 from .psp import psp
 from .fcn import fcn
 from .u2net import u2net, u2netp
+from .deeplabv3 import deeplabv3
+from .deeplabv3plus import deeplabv3_plus_mobile, deeplabv3_plus_xception
 
 from tensorflow.keras.models import Model
 import inspect
@@ -26,6 +28,9 @@ models_by_name = {
     "fcn": fcn,
     "u2net": u2net,
     "u2netp": u2netp,
+    "deeplabv3": deeplabv3,
+    "deeplabv3_plus_xception": deeplabv3_plus_xception,
+    "deeplabv3_plus_mobile": deeplabv3_plus_mobile
 }
 
 

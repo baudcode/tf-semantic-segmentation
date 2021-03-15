@@ -217,16 +217,16 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
     return x
 
 
-def deeplabv3_plus_xception(input_shape=(256, 256, 1), num_classes: int = 3, OS: int = 16):
+def deeplabv3_plus_xception(input_shape=(256, 256, 1), num_classes: int = 3, OS: int = 16) -> Model:
     return _deeplabv3_plus(backbone='xception', input_shape=input_shape, classes=num_classes, OS=OS, )
 
 
-def deeplabv3_plus_mobile(input_shape=(256, 256, 1), num_classes: int = 3, alpha: float = 1.0):
+def deeplabv3_plus_mobile(input_shape=(256, 256, 1), num_classes: int = 3, alpha: float = 1.0) -> Model:
     return _deeplabv3_plus(backbone='mobilenetv2', input_shape=input_shape, classes=num_classes, alpha=alpha)
 
 
 def _deeplabv3_plus(input_tensor=None, input_shape=(512, 512, 3), classes=21, backbone='mobilenetv2',
-                    OS=16, alpha=1.):
+                    OS=16, alpha=1.) -> Model:
     """ Instantiates the Deeplabv3+ architecture
     Optionally loads weights pre-trained
     on PASCAL VOC or Cityscapes. This model is available for TensorFlow only.

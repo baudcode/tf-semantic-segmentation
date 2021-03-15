@@ -213,6 +213,7 @@ def get_args(args=None):
     parser.add_argument("-flow_name", "--mlflow_run_name", help='name of the current run', default=None)
     parser.add_argument('-flow_trackuri', '--mlflow_tracking_uri', help='tracking uri to the mlflow client', default=None)
     parser.add_argument('-flow_reguri', '--mlflow_registry_uri', help='registry uri to the mlflow client', default=None)
+    parser.add_argument("--no_flow_log_images", action='store_true', help='do not log images when tensorboard is enabled')
 
     args = parser.parse_args(args=args)
 
@@ -485,6 +486,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                  scaled_mask=scale_mask,
                                                                                  binary_threshold=args.binary_threshold,
                                                                                  save_images=args.save_train_images,
+                                                                                 mlflow_logging=not args.no_flow_log_images and args.mlflow,
                                                                                  update_freq=args.tensorboard_train_images_update_batch_freq)
             callbacks.append(train_prediction_callback)
             train_prediction_callback.on_batch_end(-1, {})
@@ -497,6 +499,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                scaled_mask=scale_mask,
                                                                                binary_threshold=args.binary_threshold,
                                                                                save_images=args.save_val_images,
+                                                                               mlflow_logging=not args.no_flow_log_images and args.mlflow,
                                                                                update_freq=args.tensorboard_images_freq)
             callbacks.append(val_prediction_callback)
             val_prediction_callback.on_epoch_end(-1, {})
@@ -509,6 +512,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                 scaled_mask=scale_mask,
                                                                                 save_images=args.save_val_images,
                                                                                 binary_threshold=args.binary_threshold,
+                                                                                mlflow_logging=not args.no_flow_log_images and args.mlflow,
                                                                                 update_freq=args.tensorboard_images_freq)
             callbacks.append(test_prediction_callback)
             test_prediction_callback.on_epoch_end(-1, {})
@@ -574,7 +578,7 @@ def train_test_model(args, hparams=None, reporter=None):
         if experiment_id or args.mlflow_run_name:
             run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name, tags=tags)
             logger.info("mlflow run id=%s" % (run.info.run_id))
-
+        mlflow.log_image
         mlflow.tensorflow.autolog()
 
     # model fitting

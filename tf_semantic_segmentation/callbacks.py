@@ -19,6 +19,13 @@ def get_time_diff_str(start, end, period=1):
     return "%dh %dm %ds" % (h, m, s)
 
 
+def _get_numpy(tensor):
+    try:
+        return tensor.numpy()
+    except:
+        return tensor
+
+
 class TimingCallback(tf.keras.callbacks.Callback):
     """ Calculates the average time per batch """
 
@@ -55,7 +62,7 @@ class TimingCallback(tf.keras.callbacks.Callback):
 class PredictionCallback(tf.keras.callbacks.Callback):
     """Predictions logged using tensorflow summary writer"""
 
-    def __init__(self, model, logdir, generator, scaled_mask, binary_threshold: float = 0.5, update_freq: int = 1, save_images: bool = False):
+    def __init__(self, model, logdir, generator, scaled_mask, binary_threshold: float = 0.5, update_freq: int = 1, save_images: bool = False, mlflow_logging: bool = False):
         super(PredictionCallback, self).__init__()
         self.generator = generator
         self.summary_writer = tf.summary.create_file_writer(logdir)
@@ -67,6 +74,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         self.update_freq = update_freq
         self.start_time = time.time()
         self.save_images = save_images
+        self.mlflow_logging = mlflow_logging
 
         if self.save_images:
             self.samples_dir = os.path.join(logdir, 'samples')
@@ -93,7 +101,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                 image = tf.concat(images, axis=2)
                 tf.summary.image(name, image, step=step, max_outputs=batch_size)
 
-                if self.samples_dir != None:
+                if self.samples_dir != None or self.mlflow_logging:
                     name = name.replace("/", "-")
 
                     try:
@@ -104,9 +112,17 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                     if image.dtype == np.float32:
                         image = (image * 255).astype(np.uint8)
 
-                    for i, img in enumerate(image):
-                        path = os.path.join(self.samples_dir, "%d-%s-%d.jpg" % (step, name, i))
+                    # reduce batch dim
+                    img = image[0]
+
+                    if self.samples_dir:
+                        path = os.path.join(self.samples_dir, "%d-%s.jpg" % (step, name))
                         imageio.imwrite(path, img)
+
+                    if self.mlflow_logging and step != 0:
+                        # cannot log at step 0, because the run was not yet created
+                        import mlflow
+                        mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%d.jpg" % (step)))
 
             add_images('inputs', input_batch)
             # colored
@@ -148,16 +164,9 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             add_images('targets', target_batch)
             add_images('predictions', pred_batch)
 
-    @property
+    @ property
     def logdir_mode(self):
         return self.logdir.split("/")[-1]
-
-
-def _get_numpy(tensor):
-    try:
-        return tensor.numpy()
-    except:
-        return tensor
 
 
 class EpochPredictionCallback(PredictionCallback):
@@ -233,7 +242,7 @@ class SaveBestWeights(tf.keras.callbacks.Callback):
 
 class LRFinder(tf.keras.callbacks.Callback):
 
-    @property
+    @ property
     def logger_str(self):
         return "[%s]" % self.__class__.__name__
 

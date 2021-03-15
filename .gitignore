@@ -85,3 +85,8 @@ experimental/
 records/**
 gt/**
 pets/**
+mlruns/**
+examples/*logs*/
+examples/*datasets*/
+examples/*.tflite
+examples/*.txt

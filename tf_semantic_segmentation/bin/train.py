@@ -206,7 +206,13 @@ def get_args(args=None):
     parser.add_argument('-lr_min_delta', '--reduce_lr_min_delta', default=0.0001, type=float, help='reduce lr min delta')
     parser.add_argument('-lr_monitor', '--reduce_lr_monitor', default='val_loss', type=str, help='reduce lr monitor')
 
+    # mlflow
     parser.add_argument('-flow', '--mlflow', action='store_true', help='enable mlflow auto logging')
+    parser.add_argument('-flow_exp', '--mlflow_experiment', help='mlflow experiment name, will create the experiment if it does not exist and ignored if mlflow_experiment_id is specified')
+    parser.add_argument("-flow_exp_id", "--mlflow_experiment_id", help='id to the mlflow experiment', default=None)
+    parser.add_argument("-flow_name", "--mlflow_run_name", help='name of the current run', default=None)
+    parser.add_argument('-flow_trackuri', '--mlflow_tracking_uri', help='tracking uri to the mlflow client', default=None)
+    parser.add_argument('-flow_reguri', '--mlflow_registry_uri', help='registry uri to the mlflow client', default=None)
 
     args = parser.parse_args(args=args)
 
@@ -537,9 +543,41 @@ def train_test_model(args, hparams=None, reporter=None):
         validation_steps = reader.num_examples(DataType.VAL) // global_batch_size
 
     if args.mlflow:
+
         import mlflow
+        from mlflow.exceptions import MlflowException
+
+        if args.mlflow_experiment_id:
+            experiment_id = args.mlflow_experiment_id
+
+        if args.mlflow_tracking_uri:
+            mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+        if args.mlflow_registry_uri:
+            mlflow.set_registry_uri(args.mlflow_registry_uri)
+
+        elif args.mlflow_experiment:
+            try:
+                logger.debug(f"try creating mlflow experiment {args.mlflow_experiment}")
+                experiment_id = mlflow.create_experiment(args.mlflow_experiment)
+                experiment = mlflow.get_experiment(experiment_id)
+                logger.debug(f"created lflow experiment with id {experiment_id}")
+
+            except MlflowException:
+                experiment = mlflow.get_experiment_by_name(args.mlflow_experiment)
+                experiment_id = experiment.experiment_id
+                logger.debug(f"using existing mlflow experiment with id={experiment_id}")
+        else:
+            experiment_id = None
+
+        tags = {k: str(v) for k, v in vars(args).items()}
+
+        if experiment_id or args.mlflow_run_name:
+            run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name, tags=tags)
+            logger.info("mlflow run id=%s" % (run.info.run_id))
+
         mlflow.tensorflow.autolog()
 
+    # model fitting
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
                         callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 

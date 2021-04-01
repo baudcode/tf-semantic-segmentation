@@ -510,7 +510,7 @@ def train_test_model(args, hparams=None, reporter=None):
             test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
             test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
                                                                                 scaled_mask=scale_mask,
-                                                                                save_images=args.save_val_images,
+                                                                                save_images=args.save_test_images,
                                                                                 binary_threshold=args.binary_threshold,
                                                                                 mlflow_logging=not args.no_flow_log_images and args.mlflow,
                                                                                 update_freq=args.tensorboard_images_freq)

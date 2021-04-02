@@ -1,4 +1,5 @@
 from .visualizations import masks
+from .processing import line
 from .settings import logger
 
 import numpy as np
@@ -81,6 +82,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             os.makedirs(self.samples_dir)
         else:
             self.samples_dir = None
+        print(locals(), self.logdir_mode)
 
     def _log(self, input_batch, target_batch, step):
 
@@ -126,6 +128,10 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
             add_images('inputs', input_batch)
             # colored
+
+            if self.num_classes == 2:
+                predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
+                add_images('inputs/predictions_with_lines', predictions_with_lines)
 
             predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
             add_images('inputs/with_predictions', predictions_on_inputs)

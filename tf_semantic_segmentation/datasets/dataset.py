@@ -1,4 +1,3 @@
-from cv2 import data
 from ..settings import logger
 from ..visualizations import show, masks
 

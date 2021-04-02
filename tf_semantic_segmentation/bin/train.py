@@ -9,9 +9,8 @@ from tf_semantic_segmentation.processing import dataset as preprocessing_ds
 from tf_semantic_segmentation.processing import ColorMode
 from tf_semantic_segmentation.settings import logger
 from tf_semantic_segmentation.optimizers import get_optimizer_by_name, names as optimizer_choices
-from tf_semantic_segmentation.utils import get_now_timestamp, kill_start_tensorboard
+from tf_semantic_segmentation.utils import get_now_timestamp, kill_start_tensorboard, get_gpu_stats
 from tf_semantic_segmentation import callbacks as custom_callbacks
-
 
 import tensorflow as tf
 from tensorflow.keras import Model
@@ -598,11 +597,18 @@ def train_test_model(args, hparams=None, reporter=None):
         if experiment_id or args.mlflow_run_name:
             run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name)
             logger.info("mlflow run id=%s" % (run.info.run_id))
-        mlflow.log_image
         mlflow.tensorflow.autolog()
         mlflow.log_params(params)
+        try:
+            mlflow.log_param('num_gpus', len(tf.config.list_physical_devices(device_type='GPU')))
+            for key, value in get_gpu_stats().items():
+                mlflow.log_param("gpu_stats." + key, value)
 
-    # model fitting
+        except Exception as e:
+            logger.error("could not log mlflow extra params %s" % str(e))
+            pass
+
+            # model fitting
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
                         callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 

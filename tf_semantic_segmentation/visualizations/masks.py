@@ -92,7 +92,7 @@ def get_rgb(mask):
     if mask.dtype == np.float32:
         mask = (mask * 255).astype(np.uint8)
     else:
-        if mask.max() > 50:
+        if mask.max() < 50:
             mask = mask * 255
 
     if len(mask.shape) == 2:

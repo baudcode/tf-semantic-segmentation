@@ -14,9 +14,6 @@ import copy
 from tf_semantic_segmentation.utils import logger
 
 
-print = logger.debug
-
-
 def get_contours_min_max(contours):
     xs = [cnt[:, 0].tolist() for cnt in contours]
     xs = list(reduce(lambda x, y: x + y, xs))
@@ -494,9 +491,10 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
     return g
 
 
-def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tuple = (255, 0, 0), line_color: tuple = (0, 255, 0), line_thickness: int = 2, show: bool = False):
+def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tuple = (255, 0, 0), line_color: tuple = (0, 255, 0),
+               line_thickness: int = 2, show: bool = False, message: str = None):
     contour = get_contour(g)
-    image = get_mask_rgb(mask)
+    image = mask.copy()
 
     for line in line_iterator_arr(contour):
         start, end = line
@@ -508,12 +506,14 @@ def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tupl
         image = cv2.circle(image, to_tuple(p), radius, point_color, thickness=cv2.FILLED)
 
     if show:
+        if message:
+            print(message)
         display(Image.fromarray(image))
 
     return image
 
 
-def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_threshold: float = 0.5):
+def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_threshold: float = 0.5, debug: bool = False):
     detector = cv2.ximgproc.createFastLineDetector()
     processed = []
     for i, mask in enumerate(masks):
@@ -525,12 +525,19 @@ def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_thresh
         image = get_rgb(draw_on[i].copy())
         try:
             g = get_graph_from_lines(lines)
+            if debug:
+                draw_graph(image, g, show=True, message='graph lines')
+
             try:
                 g = cluster_close_points(g, eps=eps)
+                draw_graph(image, g, show=True, message='after clustering')
+                if debug:
+                    draw_graph(image, g, show=True)
                 g = create_channels(copy.deepcopy(g), mask.shape[:2][::-1], buffer=buffer)
             except:
                 pass
-            image = draw_graph(image, g)
+
+            image = draw_graph(image, g, show=debug)
 
         except Exception as e:
             print("error: %s" % str(e))

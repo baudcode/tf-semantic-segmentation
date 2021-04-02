@@ -81,7 +81,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
         if self.save_images:
             self.samples_dir = os.path.join(logdir, 'samples')
-            os.makedirs(self.samples_dir)
+            os.makedirs(self.samples_dir, exist_ok=True)
         else:
             self.samples_dir = None
         print(locals(), self.logdir_mode)

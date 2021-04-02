@@ -1,3 +1,4 @@
 shapely
 networkx
 opencv-contrib-python
+sklearn

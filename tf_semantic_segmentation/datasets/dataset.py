@@ -1,9 +1,12 @@
+from cv2 import data
 from ..settings import logger
 from ..visualizations import show, masks
 
 import imageio
 import random
+import math
 import numpy as np
+from tensorflow.keras.utils import Sequence
 
 
 class DataType:
@@ -46,6 +49,16 @@ class Dataset(object):
     def parse_example(self, example):
         return list(map(imageio.imread, example))
 
+    def parse_example_dict(self, example):
+        data = {
+            "image": imageio.imread(example[0]),
+            "mask": imageio.imread(example[1])
+        }
+        if len(example) > 2:
+            data['difficulty'] = example[2]
+
+        return data
+
     def num_examples(self, data_type):
         return len(self.raw()[data_type])
 
@@ -65,7 +78,7 @@ class Dataset(object):
         assert(mask_mode in ['gray', 'rgb', 'overlay']), 'mask mode must be in %s' % str(['gray', 'rgb', 'overlay'])
         item = self.get_random_item(data_type=data_type)
         imageio.imwrite(image_path, item[0])
-        
+
         mask = item[1]
         if mask_mode == 'rgb':
             image = np.zeros((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
@@ -76,7 +89,7 @@ class Dataset(object):
             colors = masks.get_colors(self.num_classes)
             mask = masks.overlay_classes(item[0], mask, colors, self.num_classes, alpha=alpha)
 
-        elif mask_mode == 'gray': # scale mask to 0 to 255
+        elif mask_mode == 'gray':  # scale mask to 0 to 255
             mask = (mask * (255. / (self.num_classes - 1))).astype(np.uint8)
 
         imageio.imwrite(mask_path, mask)
@@ -91,3 +104,31 @@ class Dataset(object):
                 except:
                     logger.error("could not read either one of these files %s" % str(example))
         return gen
+
+    def dict(self, data_type=DataType.TRAIN):
+        data = self.raw()[data_type]
+
+        def gen():
+            for example in data:
+                try:
+                    yield self.parse_example_dict(example)
+                except:
+                    logger.error("could not read either one of these files %s" % str(example))
+        return gen
+
+
+class SequenceDataset(Sequence):
+
+    def __init__(self, ds: Dataset, data_type: str, batch_size: int):
+        self.ds = ds
+        self.data_type = data_type
+        self.x = ds.raw()[data_type]
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return math.ceil(len(self.x) / self.batch_size)
+
+    def __getitem__(self, idx):
+        batch = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        array = list(map(self.ds.parse_example, batch))
+        return np.asrray(array[:, 0]) / 255., np.asarray(array[:, 1]) / 255.

@@ -53,6 +53,12 @@ class CleanCommand(clean):
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+
+with open("extra_requirements.txt", 'r') as h:
+    extra_requirements = [r.replace("\n", "") for r in h.readlines()]
+
+extras = {"extra": extra_requirements}
+
 setuptools.setup(
     name=package_name,
     version=main_ns['__version__'],
@@ -67,6 +73,7 @@ setuptools.setup(
     maintainer_email='malte-koch@gmx.net',
     url="https://github.com/baudcode/tf-semantic-segmentation",
     cmdclass={"clean": CleanCommand},
+    extras_require=extras,
     # namespace_packages=[package_name],
     packages=setuptools.find_packages(include=package_name + "/*"),
     # packages=setuptools.find_namespace_packages(exclude=['tests', 'tests.*', "experimental", "experimantal/*"]),

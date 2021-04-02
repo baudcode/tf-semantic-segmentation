@@ -1,5 +1,4 @@
 from .visualizations import masks
-from .processing import line
 from .settings import logger
 
 import numpy as np
@@ -63,7 +62,9 @@ class TimingCallback(tf.keras.callbacks.Callback):
 class PredictionCallback(tf.keras.callbacks.Callback):
     """Predictions logged using tensorflow summary writer"""
 
-    def __init__(self, model, logdir, generator, scaled_mask, binary_threshold: float = 0.5, update_freq: int = 1, save_images: bool = False, mlflow_logging: bool = False):
+    def __init__(self, model, logdir, generator, scaled_mask, binary_threshold: float = 0.5,
+                 update_freq: int = 1, save_images: bool = False, mlflow_logging: bool = False,
+                 draw_contours: bool = False):
         super(PredictionCallback, self).__init__()
         self.generator = generator
         self.summary_writer = tf.summary.create_file_writer(logdir)
@@ -76,6 +77,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         self.start_time = time.time()
         self.save_images = save_images
         self.mlflow_logging = mlflow_logging
+        self.draw_contours = draw_contours
 
         if self.save_images:
             self.samples_dir = os.path.join(logdir, 'samples')
@@ -129,7 +131,8 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             add_images('inputs', input_batch)
             # colored
 
-            if self.num_classes == 2:
+            if self.num_classes == 2 and self.draw_contours:
+                from tf_semantic_segmentation.processing import line
                 predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
                 add_images('inputs/predictions_with_lines', predictions_with_lines)
 

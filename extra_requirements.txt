@@ -1,0 +1,3 @@
+shapely
+networkx
+opencv-contrib-python

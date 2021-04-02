@@ -196,6 +196,7 @@ def get_args(args=None):
     parser.add_argument("--save_val_images", action='store_true', help='saves val images to logdir/val/samples')
     parser.add_argument("--save_train_images", action='store_true', help='saves val images to logdir/train/samples')
     parser.add_argument("--save_test_images", action='store_true', help='saves val images to logdir/test/samples')
+    parser.add_argument("--tb_draw_contours", action='store_true', help='draw contours in tensorboard')
 
     # early stopping
     parser.add_argument('--no_early_stopping', action='store_true', help='if specified, do not add callback for early stopping')
@@ -502,6 +503,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                  binary_threshold=args.binary_threshold,
                                                                                  save_images=args.save_train_images,
                                                                                  mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                                 draw_contours=args.tb_draw_contours,
                                                                                  update_freq=args.tensorboard_train_images_update_batch_freq)
             callbacks.append(train_prediction_callback)
             train_prediction_callback.on_batch_end(-1, {})
@@ -515,6 +517,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                binary_threshold=args.binary_threshold,
                                                                                save_images=args.save_val_images,
                                                                                mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                               draw_contours=args.tb_draw_contours,
                                                                                update_freq=args.tensorboard_images_freq)
             callbacks.append(val_prediction_callback)
             val_prediction_callback.on_epoch_end(-1, {})
@@ -528,6 +531,7 @@ def train_test_model(args, hparams=None, reporter=None):
                                                                                 save_images=args.save_test_images,
                                                                                 binary_threshold=args.binary_threshold,
                                                                                 mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                                draw_contours=args.tb_draw_contours,
                                                                                 update_freq=args.tensorboard_images_freq)
             callbacks.append(test_prediction_callback)
             test_prediction_callback.on_epoch_end(-1, {})

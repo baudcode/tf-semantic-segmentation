@@ -398,10 +398,9 @@ def train_test_model(args, hparams=None, reporter=None):
     try:
         if args.mixed_float16:
             logger.info("using mixed float16 precision, tf version >= 2.1 required")
-            policy = tf.keras.mixed_precision.experimental.Policy('mixed_float16')
-            tf.keras.mixed_precision.experimental.set_policy(policy)
+            tf.keras.mixed_precision.set_global_policy('mixed_float16')
         else:
-            tf.keras.mixed_precision.experimental.set_policy(None)
+            tf.keras.mixed_precision.set_global_policy(None)
 
     except Exception as e:
         logger.error("cannot set mixed precision policy, exception: %s" % str(e))
@@ -447,7 +446,7 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
 
-        model = Model(model.input, Activation(args.final_activation, dtype='float32')(model.output))
+        model = Model(model.input, Activation(args.final_activation, dtype='float32', name='predictions')(model.output))
         logger.info("output shape: %s" % model.output.shape)
         logger.info("input shape: %s" % model.input.shape)
 

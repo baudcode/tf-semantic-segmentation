@@ -593,13 +593,14 @@ def train_test_model(args, hparams=None, reporter=None):
         else:
             experiment_id = None
 
-        tags = {k: str(v) for k, v in vars(args).items()}
+        params = {k: str(v) for k, v in vars(args).items()}
 
         if experiment_id or args.mlflow_run_name:
-            run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name, tags=tags)
+            run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name)
             logger.info("mlflow run id=%s" % (run.info.run_id))
         mlflow.log_image
         mlflow.tensorflow.autolog()
+        mlflow.log_params(params)
 
     # model fitting
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,

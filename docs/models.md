@@ -10,6 +10,9 @@
 - InceptionResnetV2Unet (unet with inception-resnet v2 encoder pre-trained on imagenet)
 - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
 - AttentionUnet
+- DeeplabV3
+- DeeplabV3PlusXception
+- DeeplabV3PlusMobile
 
 ```python
 from tf_semantic_segmentation import models

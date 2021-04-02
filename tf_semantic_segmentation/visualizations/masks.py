@@ -86,3 +86,21 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
         images[i, :, :, :] = overlay_classes(images[i, :, :, :].copy(), predictions[i], colors, num_classes, alpha=alpha)
 
     return images
+
+
+def get_rgb(mask):
+    if mask.dtype == np.float32:
+        mask = (mask * 255).astype(np.uint8)
+    else:
+        if mask.max() > 50:
+            mask = mask * 255
+
+    if len(mask.shape) == 2:
+        mask = np.expand_dims(mask, axis=-1)
+
+    if mask.shape[-1] == 1:
+        rgb = np.concatenate([mask, mask, mask], axis=-1)
+    else:
+        rgb = mask.copy()
+
+    return rgb

@@ -11,6 +11,13 @@ def ce_label_smoothing_loss(smoothing=0.1):
     return ce_label_smoothing_fixed
 
 
+def bce_label_smoothing_loss(smoothing=0.1):
+    def bce_label_smoothing_fixed(y_true, y_pred):
+        # y_true, y_pred = to2d(y_true), to2d(y_pred)
+        return K.mean(BinaryCrossentropy(label_smoothing=smoothing, reduction=Reduction.NONE)(y_true, y_pred))
+    return bce_label_smoothing_fixed
+
+
 def categorical_crossentropy_loss():
     def categorical_crossentropy(y_true, y_pred):
         # y_true, y_pred = to2d(y_true, y_pred)

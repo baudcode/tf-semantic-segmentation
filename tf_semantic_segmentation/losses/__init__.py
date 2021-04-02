@@ -2,7 +2,7 @@ from tensorflow.keras import backend as K
 from .utils import gather_channels, get_reduce_axes, round_if_needed, SMOOTH, average, onehot2image, expand_binary
 from .focal import binary_focal_loss, categorical_focal_loss
 from .ssim import ssim_loss
-from .ce import ce_label_smoothing_loss, categorical_crossentropy_loss, binary_crossentropy_loss
+from .ce import ce_label_smoothing_loss, categorical_crossentropy_loss, binary_crossentropy_loss, bce_label_smoothing_loss
 from .dice import dice_loss, tversky_loss, focal_tversky_loss
 from .combined import categorical_crossentropy_ssim_loss, binary_crossentropy_ssim_loss, \
     dice_binary_crossentropy_loss, dice_categorical_crossentropy_loss, dice_ssim_loss, \
@@ -12,6 +12,7 @@ from .lovasz import binary_lovasz, categorical_lovasz
 losses_by_name = {
     "categorical_crossentropy": categorical_crossentropy_loss(),
     "ce_label_smoothing": ce_label_smoothing_loss(smoothing=0.1),
+    "bce_label_smoothing": bce_label_smoothing_loss(smoothing=0.1),
     "binary_crossentropy": binary_crossentropy_loss(),
     "categorical_focal": categorical_focal_loss(),
     "binary_focal": binary_focal_loss(),

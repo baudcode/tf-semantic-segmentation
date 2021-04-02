@@ -65,6 +65,17 @@ def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], st
     return current_bs
 
 
+def get_logdir_name(args):
+    prefix = '%s-%s-bs%d-e%d-lr%.4f-%s-%s-%s' % (
+        str(args.dataset), str(args.model), args.batch_size, args.epochs, args.learning_rate, args.optimizer, args.loss, args.final_activation
+    )
+    name = prefix + "-" + get_now_timestamp()
+    if args.logdir_suffix:
+        name += "-" + args.logdir_suffix
+
+    return name
+
+
 def get_args(args=None):
 
     color_modes = [int(cm) for cm in ColorMode]
@@ -105,6 +116,8 @@ def get_args(args=None):
                         help='metrics, choices: %s' % (list(metrics_by_name.keys())))
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('-logdir', '--logdir', default=None, help='log dir (where the tensorboard log files and saved models go)')
+    parser.add_argument('-lsuf', '--logdir_suffix', default=None, help='a suffix that is appended to the randomly generated logdir')
+
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
     parser.add_argument('-no_eval', '--no_evaluate', action='store_true', help='evaluates after training completes on the validation set')
 
@@ -253,7 +266,9 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("Using logdir %s, because None was specified" % args.logdir)
 
     if args.logdir is None:
-        args.logdir = os.path.join("logs", "default", get_now_timestamp())
+
+        name = get_logdir_name(args)
+        args.logdir = os.path.join("logs", "default", name)
 
     logger.info("logdir: %s" % args.logdir)
     if args.delete_logdir and os.path.isdir(args.logdir):

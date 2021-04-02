@@ -38,7 +38,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     elif mode == 'eager':
         if len(image.shape) == 2:
             image = tf.expand_dims(image, axis=-1)
-        
+
         if color_mode == ColorMode.RGB and image.shape[-1] == 1:
             image = tf.image.grayscale_to_rgb(image)
 
@@ -66,10 +66,10 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
             image = tf.image.resize_with_crop_or_pad(image, size[0], size[1])
             if mask is not None:
                 mask = tf.image.resize_with_crop_or_pad(mask, size[0], size[1])  # use nearest for no interpolation
-        
+
         elif resize_method == 'patch':
             image, mask = select_patch(image, mask, size, color_mode)
-        
+
         else:
             raise Exception("unknown resize method %s" % resize_method)
 
@@ -127,7 +127,7 @@ def select_patch(image, mask, patch_size, color_mode):
         patches = tf.image.random_crop(stack, size=[2, patch_size[0], patch_size[1], 1])
         patch_image = patches[0]
         patch_mask = patches[1]
-    
+
     return (patch_image, patch_mask)
 
 
@@ -149,13 +149,12 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
         dataset = dataset.repeat(repeat)
     else:
         dataset = dataset.repeat()
-    
+
     # `tf.data.Options()` object then setting `options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA`
     if utils.tf_version_gt_eq('2.4'):
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
         dataset = dataset.with_options(options)
-
 
     dataset = dataset.batch(batch_size)
 
@@ -175,6 +174,14 @@ def random_flip_lr(**args):
     bool_right_left = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
     for k, x in args.items():
         x = tf.cond(bool_right_left, lambda: tf.image.flip_left_right(x), lambda: x)
+        args[k] = x
+    return args
+
+
+def random_rot90(**args):
+    condition = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
+    for k, x in args.items():
+        x = tf.cond(condition, lambda: tf.image.rot90(x), lambda: x)
         args[k] = x
     return args
 
@@ -240,10 +247,10 @@ def random_zoom(size, batch_size, **args):
     return args
 
 
-augmentation_methods = ['rot180', 'flip_lr', 'flip_ud', 'color']
+augmentation_methods = ['rot180', 'flip_lr', 'flip_ud', 'color', 'rot90']
 
 
-def get_augment_fn(size, batch_size, methods=['rot180', 'flip_lr', 'flip_ud', 'color']):
+def get_augment_fn(size, batch_size, methods=augmentation_methods):
 
     for method in methods:
         if method not in augmentation_methods:
@@ -255,6 +262,10 @@ def get_augment_fn(size, batch_size, methods=['rot180', 'flip_lr', 'flip_ud', 'c
         if 'rot180' in methods:
             rot180 = random_rot180(images=images, masks=masks)
             images, masks = rot180['images'], rot180['masks']
+
+        if 'rot90' in methods:
+            rot90 = random_rot90(images=images, masks=masks)
+            images, masks = rot90['images'], rot90['masks']
 
         # random flipping
         if 'flip_lr' in methods:

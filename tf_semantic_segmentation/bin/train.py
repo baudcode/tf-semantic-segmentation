@@ -67,7 +67,7 @@ def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], st
 
 
 def get_logdir_name(args):
-    dataset = "record-%s" % os.path.basename(args.record_dir) if args.record_dir else str(args.dataset)
+    dataset = "record-%s" % os.path.dirname(args.record_dir) if args.record_dir else str(args.dataset)
     prefix = '%s-%s-bs%d-e%d-lr%.4f-%s-%s-%s' % (
         dataset, str(args.model), args.batch_size, args.epochs, args.learning_rate, args.optimizer, args.loss, args.final_activation
     )

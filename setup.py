@@ -57,7 +57,10 @@ with open("README.md", "r") as fh:
 with open("extra_requirements.txt", 'r') as h:
     extra_requirements = [r.replace("\n", "") for r in h.readlines()]
 
-extras = {"extra": extra_requirements}
+extras = {
+    "extra": extra_requirements,
+    "notify": ["slack-notifications", 'mlflow']
+}
 
 setuptools.setup(
     name=package_name,

@@ -66,13 +66,14 @@ def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], st
 
 
 def get_logdir_name(args):
-    dataset = "record-%s" % os.path.dirname(args.record_dir) if args.record_dir else str(args.dataset)
-    prefix = '%s-%s-bs%d-e%d-lr%.4f-%s-%s-%s' % (
-        dataset, str(args.model), args.batch_size, args.epochs, args.learning_rate, args.optimizer, args.loss, args.final_activation
-    )
-    name = prefix + "-" + get_now_timestamp()
-    if args.logdir_suffix:
-        name += "-" + args.logdir_suffix
+    if args.run_name:
+        name = args.run_name + "-" + get_now_timestamp()
+    else:
+        dataset = "record-%s" % os.path.dirname(args.record_dir) if args.record_dir else str(args.dataset)
+        prefix = '%s-%s-bs%d-e%d-lr%.4f-%s-%s-%s' % (
+            dataset, str(args.model), args.batch_size, args.epochs, args.learning_rate, args.optimizer, args.loss, args.final_activation
+        )
+        name = prefix + "-" + get_now_timestamp()
 
     return name
 
@@ -117,7 +118,6 @@ def get_args(args=None):
                         help='metrics, choices: %s' % (list(metrics_by_name.keys())))
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('-logdir', '--logdir', default=None, help='log dir (where the tensorboard log files and saved models go)')
-    parser.add_argument('-lsuf', '--logdir_suffix', default=None, help='a suffix that is appended to the randomly generated logdir')
 
     parser.add_argument('-delete', '--delete_logdir', action='store_true', help='if logdir exist and --delete_logdir, delete everything in it')
     parser.add_argument('-no_eval', '--no_evaluate', action='store_true', help='evaluates after training completes on the validation set')
@@ -134,9 +134,11 @@ def get_args(args=None):
     parser.add_argument('--tpu_strategy', action='store_true', help='use the tpu strategy for training on tpus')
     parser.add_argument('--mixed_float16', action='store_true', help='use tf 2.1 feature to train a whole keras model on float16, REQUIRES TF 2.1')
 
+    # run name
+    parser.add_argument('-name', '--run_name', default=None, help='name of the run')
+
     # wandb
-    parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used')
-    parser.add_argument('-wn', '--wandb_name', default=None, help='name of the run, otherwise wandb will create a name for you')
+    parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used; uses `run_name` for nameing the current run')
 
     # weights
     parser.add_argument('-weights', '--model_weights', default=None, type=str, help='path to the model weights')
@@ -225,10 +227,15 @@ def get_args(args=None):
     parser.add_argument('-flow', '--mlflow', action='store_true', help='enable mlflow auto logging')
     parser.add_argument('-flow_exp', '--mlflow_experiment', help='mlflow experiment name, will create the experiment if it does not exist and ignored if mlflow_experiment_id is specified')
     parser.add_argument("-flow_exp_id", "--mlflow_experiment_id", help='id to the mlflow experiment', default=None)
-    parser.add_argument("-flow_name", "--mlflow_run_name", help='name of the current run', default=None)
     parser.add_argument('-flow_trackuri', '--mlflow_tracking_uri', help='tracking uri to the mlflow client', default=None)
     parser.add_argument('-flow_reguri', '--mlflow_registry_uri', help='registry uri to the mlflow client', default=None)
     parser.add_argument("--no_flow_log_images", action='store_true', help='do not log images when tensorboard is enabled')
+
+    # notifications
+    parser.add_argument('--notify', action='store_true', help='activate notifications')
+    parser.add_argument('--slack_token', default=None, help='slack token')
+    parser.add_argument('--slack_username', default="TFSemSeg", help='slack username that posts notifications')
+    parser.add_argument('--slack_channel', default="training", help='slack channel that notifications will be posted to')
 
     args = parser.parse_args(args=args)
 
@@ -260,7 +267,7 @@ def train_test_model(args, hparams=None, reporter=None):
     # setting up wandb
     if args.wandb_project:
         import wandb
-        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.wandb_name, sync_tensorboard=True, reinit=True)
+        wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.run_name, sync_tensorboard=True, reinit=True)
         callbacks.append(wandb.keras.WandbCallback())
 
         if args.logdir is None:
@@ -309,6 +316,12 @@ def train_test_model(args, hparams=None, reporter=None):
         callbacks.append(kcallbacks.ReduceLROnPlateau(monitor=args.reduce_lr_monitor, factor=args.reduce_lr_factor,
                                                       patience=args.reduce_lr_patience, min_lr=args.reduce_lr_min_lr, verbose=1,
                                                       mode=args.reduce_lr_mode, min_delta=args.reduce_lr_min_delta))
+
+    if args.notify:
+        callbacks.append(custom_callbacks.NotificationCallback(run_name=args.run_name,
+                                                               token=args.slack_token,
+                                                               username=args.slack_username,
+                                                               channel=args.slack_channel))
 
     if hparams:
         from tensorboard.plugins.hparams import api as hp
@@ -594,8 +607,8 @@ def train_test_model(args, hparams=None, reporter=None):
 
         params = {k: str(v) for k, v in vars(args).items()}
 
-        if experiment_id or args.mlflow_run_name:
-            run = mlflow.start_run(experiment_id=experiment_id, run_name=args.mlflow_run_name)
+        if experiment_id or args.run_name:
+            run = mlflow.start_run(experiment_id=experiment_id, run_name=args.run_name)
             logger.info("mlflow run id=%s" % (run.info.run_id))
         mlflow.tensorflow.autolog()
         mlflow.log_params(params)
@@ -608,7 +621,7 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.error("could not log mlflow extra params %s" % str(e))
             pass
 
-            # model fitting
+    # model fitting
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
                         callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
 

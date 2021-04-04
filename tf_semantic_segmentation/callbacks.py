@@ -10,6 +10,12 @@ import time
 from tensorflow.keras import backend as K
 import os
 
+try:
+    from .notify import slack
+    SLACK_IMPORTED = True
+except:
+    SLACK_IMPORTED = False
+
 
 def get_time_diff_str(start, end, period=1):
     diff = int((end - start) / period) if period != 0 else int((end - start))
@@ -386,3 +392,27 @@ class LRFinder(tf.keras.callbacks.Callback):
 
         logger.info("%s set lr to %.6f" % (self.logger_str, lr))
         K.set_value(self.model.optimizer.lr, lr)
+
+
+class NotificationCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, run_name: str, token: str, channel: str, username: str = 'TFSemSeg'):
+        super(NotificationCallback, self).__init__()
+        logger.info("Initialize Notification callback")
+
+        if token == None:
+            raise Exception("slack token is null (not supplied)")
+
+        self.token = token
+        self.channel = channel
+        self.run_name = run_name
+        self.username = username
+
+        slack.divider(self.channel, self.token)
+        slack.send_message('Starting run %s' % run_name, self.channel, self.token)
+
+    def on_epoch_end(self, epoch, logs=None):
+        try:
+            slack.send_metrics(epoch, self.run_name, logs, self.channel, self.token)
+        except Exception as e:
+            logger.error("could not send metrics to slack: %s" % str(e))

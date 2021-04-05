@@ -206,6 +206,8 @@ def get_args(args=None):
     parser.add_argument('-es_patience', '--early_stopping_patience', default=20, type=int, help='early stopping patience [epochs]')
     parser.add_argument('-es_mode', '--early_stopping_mode', default='min', type=str, help='early stopping mode')
     parser.add_argument('-es_monitor', '--early_stopping_monitor', default='val_loss', type=str, help='early stopping monitor metric/loss')
+    parser.add_argument('-es_min_delta', '--early_stopping_min_delta', default=0, type=float,
+                        help='early stopping monitor mindelta that counts for an improvement')
 
     # lr finder
     parser.add_argument('--find_lr', action='store_true', help='if specified, the learning rate finder runs')
@@ -308,7 +310,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if not args.no_early_stopping:
         callbacks.append(kcallbacks.EarlyStopping(monitor=args.early_stopping_monitor,  # default: val_loss
                                                   mode=args.early_stopping_mode,  # default: min
-                                                  min_delta=0,
+                                                  min_delta=args.early_stopping_min_delta,
                                                   patience=args.early_stopping_patience,  # default: 20
                                                   verbose=1))
 

@@ -206,6 +206,8 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                 if self.num_classes == 2:
                     predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
                     add_images(Visualization.INPUTS_WITH_CONTOURS, predictions_with_lines)
+                else:
+                    logger.warn("cannot log inputs with contours when num_classes != 2")
 
             vis2call = {
                 Visualization.INPUTS: lambda: add_images(Visualization.INPUTS.value, input_batch),

@@ -214,8 +214,7 @@ def get_args(args=None):
     parser.add_argument("--save_val_images", action='store_true', help='saves val images to logdir/val/samples')
     parser.add_argument("--save_train_images", action='store_true', help='saves val images to logdir/train/samples')
     parser.add_argument("--save_test_images", action='store_true', help='saves val images to logdir/test/samples')
-    parser.add_argument("-v", "--visualizations", type=any_enum, default=custom_callbacks.DEFAULT_VISUALIZATIONS)
-    parser.add_argument("--tb_draw_contours", action='store_true', help='draw contours in tensorboard')
+    parser.add_argument("-v", "--visualizations", type=any_enum(custom_callbacks.Visualization), default=custom_callbacks.DEFAULT_VISUALIZATIONS)
 
     # early stopping
     parser.add_argument('--no_early_stopping', action='store_true', help='if specified, do not add callback for early stopping')
@@ -522,6 +521,8 @@ def train_test_model(args, hparams=None, reporter=None):
     val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
+
+    logger.info("visualizations: %s" % str(args.visualizations))
 
     # log images to tensorboard
     if (args.tensorboard_train_images and args.tensorboard_train_images_update_batch_freq > 0) or args.save_train_images:

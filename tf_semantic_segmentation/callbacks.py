@@ -15,9 +15,9 @@ from enum import Enum
 
 
 class Visualization(str, Enum):
-    INPUTS_WTIH_PREDICTIONS = "inputs/with_predictions"
+    INPUTS_WTIH_PREDICTIONS = "inputs/predictions"
     INPUTS = "inputs"
-    INPUTS_WITH_TARGETS = "inputs/with_targets"
+    INPUTS_WITH_TARGETS = "inputs/targets"
     TARGETS_RGB = "targets/rgb"
     PREDICTIONS_RGB = "predictions/rgb"
     TARGETS = "targets"

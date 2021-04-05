@@ -9,12 +9,7 @@ import tempfile
 import time
 from tensorflow.keras import backend as K
 import os
-
-try:
-    from .notify import slack
-    SLACK_IMPORTED = True
-except:
-    SLACK_IMPORTED = False
+from .notify import slack
 
 
 def get_time_diff_str(start, end, period=1):

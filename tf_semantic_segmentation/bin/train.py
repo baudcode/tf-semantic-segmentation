@@ -66,7 +66,7 @@ def find_optimal_batch_size(args, batch_sizes=[pow(2, i) for i in range(16)], st
 
 
 def get_logdir_name(args):
-    if args.run_name:
+    if args.run_name != None:
         name = args.run_name + "-" + get_now_timestamp()
     else:
         dataset = "record-%s" % os.path.dirname(args.record_dir) if args.record_dir else str(args.dataset)
@@ -135,7 +135,7 @@ def get_args(args=None):
     parser.add_argument('--mixed_float16', action='store_true', help='use tf 2.1 feature to train a whole keras model on float16, REQUIRES TF 2.1')
 
     # run name
-    parser.add_argument('-name', '--run_name', default=None, help='name of the run')
+    parser.add_argument('-name', '--run_name', default=None, type=str, help='name of the run')
 
     # wandb
     parser.add_argument('-p', '--wandb_project', default=None, help='project name, if None wandb wont be used; uses `run_name` for nameing the current run')

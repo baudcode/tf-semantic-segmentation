@@ -546,4 +546,5 @@ def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_thresh
 
         print(image.max(), image.min(), image.dtype, image.shape)
         processed.append(image)
-    return processed
+
+    return np.asarray(processed)

@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing
 
 resize_methods = ['resize', 'resize_with_pad', 'resize_with_crop_or_pad', 'patch']
+THRESHOLD = 0.5
 
 
 def resize_and_change_color(image, mask, size, color_mode, resize_method='resize_with_pad', mode='graph'):
@@ -171,7 +172,7 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
 
 
 def random_flip_lr(**args):
-    bool_right_left = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
+    bool_right_left = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
     for k, x in args.items():
         x = tf.cond(bool_right_left, lambda: tf.image.flip_left_right(x), lambda: x)
         args[k] = x
@@ -179,7 +180,7 @@ def random_flip_lr(**args):
 
 
 def random_rot90(**args):
-    condition = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
+    condition = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
     for k, x in args.items():
         x = tf.cond(condition, lambda: tf.image.rot90(x), lambda: x)
         args[k] = x
@@ -187,7 +188,7 @@ def random_rot90(**args):
 
 
 def random_flip_ud(**args):
-    bool_up_down = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
+    bool_up_down = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
     for k, x in args.items():
         x = tf.cond(bool_up_down, lambda: tf.image.flip_up_down(x), lambda: x)
         args[k] = x
@@ -196,16 +197,20 @@ def random_flip_ud(**args):
 
 def random_rot180(**args):
 
-    angle = tf.random.uniform(shape=[], minval=0, maxval=2, dtype=tf.int32) * 2
+    cond = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
+
+    def _apply_rot180(x):
+        return tf.image.rot90(x, 2)
+
     for k, x in args.items():
-        x = tf.image.rot90(x, angle)
-        args[k] = x
+        args[k] = tf.cond(cond, lambda: _apply_rot180(x), lambda: x)
+
     return args
 
 
 def random_color(**args):
 
-    bool_color = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) > 0.5
+    bool_color = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
 
     def _apply_color_augmentations(x):
         x = tf.image.random_hue(x, 0.08)
@@ -231,18 +236,16 @@ def random_zoom(size, batch_size, **args):
         boxes[i] = [x1, y1, x2, y2]
 
     def random_crop(img, idx):
-        print(img.shape)
         crops = tf.image.crop_and_resize(img, boxes=boxes, box_indices=np.zeros(len(scales)), crop_size=size, method='nearest')
-        print(crops)
         return crops[idx]
-    print(boxes)
+
     idxs = tf.random.uniform(shape=[batch_size], minval=0, maxval=len(scales), dtype=tf.int32)
-    choice = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
+    cond = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32) >= THRESHOLD
 
     for k, x in args.items():
         # Only apply cropping 50% of the time
         elems = [(args[k][i, :, :, :], idxs[i]) for i in range(batch_size)]
-        args[k] = tf.cond(choice > 1.0, lambda: x, lambda: tf.map_fn(random_crop, elems=elems, dtype=args[k].dtype))
+        args[k] = tf.cond(cond, lambda: x, lambda: tf.map_fn(random_crop, elems=elems, dtype=args[k].dtype))
 
     return args
 

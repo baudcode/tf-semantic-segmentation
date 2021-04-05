@@ -1,3 +1,4 @@
+from typing import List
 from .visualizations import masks
 from .settings import logger
 
@@ -10,6 +11,26 @@ import time
 from tensorflow.keras import backend as K
 import os
 from .notify import slack
+from enum import Enum
+
+
+class Visualization(str, Enum):
+    INPUTS_WTIH_PREDICTIONS = "inputs/with_predictions"
+    INPUTS = "inputs"
+    INPUTS_WITH_TARGETS = "inputs/with_targets"
+    TARGETS_RGB = "targets/rgb"
+    PREDICTIONS_RGB = "predictions/rgb"
+    TARGETS = "targets"
+    PREDICTIONS = "predictions"
+    PREDICTIONS_WITH_THRESHOLD = "predictions/threshold"
+    INPUTS_WITH_CONTOURS = "inputs/contours"
+
+
+DEFAULT_VISUALIZATIONS = [
+    Visualization.INPUTS_WTIH_PREDICTIONS,
+    Visualization.TARGETS,
+    Visualization.PREDICTIONS
+]
 
 
 def get_time_diff_str(start, end, period=1):
@@ -65,7 +86,8 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
     def __init__(self, model, logdir, generator, scaled_mask, binary_threshold: float = 0.5,
                  update_freq: int = 1, save_images: bool = False, mlflow_logging: bool = False,
-                 draw_contours: bool = False):
+                 visualizations: List[Visualization] = DEFAULT_VISUALIZATIONS,
+                 save_to_tensorboard: bool = True):
         super(PredictionCallback, self).__init__()
         self.generator = generator
         self.summary_writer = tf.summary.create_file_writer(logdir)
@@ -78,13 +100,15 @@ class PredictionCallback(tf.keras.callbacks.Callback):
         self.start_time = time.time()
         self.save_images = save_images
         self.mlflow_logging = mlflow_logging
-        self.draw_contours = draw_contours
+        self.save_to_tensorboard = save_to_tensorboard
 
         if self.save_images:
             self.samples_dir = os.path.join(logdir, 'samples')
             os.makedirs(self.samples_dir, exist_ok=True)
         else:
             self.samples_dir = None
+        self.visualizations = visualizations
+
         print(locals(), self.logdir_mode)
 
     def _log(self, input_batch, target_batch, step):
@@ -104,7 +128,9 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                 # make one image
                 images = tf.split(images, num_or_size_splits=batch_size, axis=0)
                 image = tf.concat(images, axis=2)
-                tf.summary.image(name, image, step=step, max_outputs=batch_size)
+
+                if self.save_to_tensorboard:
+                    tf.summary.image(name, image, step=step, max_outputs=batch_size)
 
                 if self.samples_dir != None or self.mlflow_logging:
                     name = name.replace("/", "-")
@@ -129,50 +155,75 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                         import mlflow
                         mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%d.jpg" % (step)))
 
+            def visualize_input_with_predictions():
+                predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                add_images(Visualization.INPUTS_WTIH_PREDICTIONS.value, predictions_on_inputs)
+
+            def visualize_inputs_with_targets():
+                targets_on_inputs = masks.get_colored_segmentation_mask(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                add_images(Visualization.INPUTS_WITH_TARGETS.value, targets_on_inputs)
+
+            def visualize_targets_rgb():
+                targets_rgb = masks.get_colored_segmentation_mask(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                add_images(Visualization.TARGETS_RGB.value, targets_rgb)
+
+            def visualize_predictions_rgb():
+                pred_rgb = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                add_images(Visualization.PREDICTIONS_RGB, pred_rgb)
+
+            def visualize_targets():
+                target_batch_copy = target_batch.copy()
+                if not self.scaled_mask:
+                    target_batch_copy = np.argmax(target_batch_copy, axis=-1).astype(np.float32)
+                    target_batch_copy = np.expand_dims(target_batch_copy, axis=-1)
+                else:
+                    pass
+
+                target_batch_copy = (target_batch_copy * 255. / (self.num_classes - 1)).astype(np.uint8)
+                add_images(Visualization.TARGETS.value, target_batch_copy)
+
+            def visualize_predictions():
+                pred_batch_copy = pred_batch.copy()
+                if not self.scaled_mask:
+                    pred_batch_copy = np.argmax(pred_batch_copy, axis=-1).astype(np.float32)
+                    pred_batch_copy = np.expand_dims(pred_batch_copy, axis=-1)
+
+                add_images(Visualization.PREDICTIONS.value, pred_batch_copy)
+
+            def visualize_predictions_with_threshold():
+                pred_batch_copy = pred_batch.copy()
+                if not self.scaled_mask:
+                    pred_batch_copy = np.argmax(pred_batch_copy, axis=-1).astype(np.float32)
+                    pred_batch_copy = np.expand_dims(pred_batch_copy, axis=-1)
+                else:
+                    pred_batch_copy[pred_batch_copy > self.binary_threshold] = 1.0
+                    pred_batch_copy[pred_batch_copy <= self.binary_threshold] = 0.0
+
+                add_images(Visualization.PREDICTIONS.value, pred_batch_copy)
+
+            def visualize_contours():
+                from tf_semantic_segmentation.processing import line
+                if self.num_classes == 2:
+                    predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
+                    add_images(Visualization.INPUTS_WITH_CONTOURS, predictions_with_lines)
+
+            vis2call = {
+                Visualization.INPUTS: lambda: add_images(Visualization.INPUTS.value, input_batch),
+                Visualization.INPUTS_WTIH_PREDICTIONS: visualize_input_with_predictions,
+                Visualization.INPUTS_WITH_TARGETS: visualize_inputs_with_targets,
+                Visualization.TARGETS_RGB: visualize_targets_rgb,
+                Visualization.PREDICTIONS_RGB: visualize_predictions_rgb,
+                Visualization.PREDICTIONS: visualize_predictions,
+                Visualization.TARGETS: visualize_targets,
+                Visualization.PREDICTIONS_WITH_THRESHOLD: visualize_predictions_with_threshold,
+                Visualization.INPUTS_WITH_CONTOURS: visualize_contours
+            }
+
+            for vis in self.visualizations:
+                vis2call[vis]()
+
             add_images('inputs', input_batch)
             # colored
-
-            if self.num_classes == 2 and self.draw_contours:
-                from tf_semantic_segmentation.processing import line
-                predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
-                add_images('inputs/predictions_with_lines', predictions_with_lines)
-
-            predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
-            add_images('inputs/with_predictions', predictions_on_inputs)
-
-            targets_on_inputs = masks.get_colored_segmentation_mask(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
-            add_images('inputs/with_targets', targets_on_inputs)
-
-            targets_rgb = masks.get_colored_segmentation_mask(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
-            add_images('targets/rgb', targets_rgb)
-
-            pred_rgb = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
-            add_images('predictions/rgb', pred_rgb)
-
-            if not self.scaled_mask:
-                pred_batch = np.argmax(pred_batch, axis=-1).astype(np.float32)
-                target_batch = np.argmax(target_batch, axis=-1).astype(np.float32)
-                pred_batch = (pred_batch * 255. / (self.num_classes - 1)).astype(np.uint8)
-
-                # reshape, that add_images works
-                pred_batch = np.expand_dims(pred_batch, axis=-1)
-                target_batch = np.expand_dims(target_batch, axis=-1)
-            else:
-                pred_batch[pred_batch > self.binary_threshold] = 1.0
-                pred_batch[pred_batch <= self.binary_threshold] = 0.0
-                pred_batch = (pred_batch * 255.).astype(np.uint8)
-
-            # simple
-            # intersection = np.logical_or(target_batch, pred_batch).astype(np.float32)
-            # union = np.logical_and(target_batch, pred_batch).astype(np.float32)
-
-            # add_images('metrics/intersection', intersection)
-            # add_images('metrics/union', union)
-
-            # scale
-            target_batch = (target_batch * 255. / (self.num_classes - 1)).astype(np.uint8)
-            add_images('targets', target_batch)
-            add_images('predictions', pred_batch)
 
     @ property
     def logdir_mode(self):

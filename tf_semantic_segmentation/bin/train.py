@@ -104,6 +104,17 @@ def get_args(args=None):
 
         return any_of_type
 
+    def any_enum(enum):
+        def any_of_enum(x):
+            x_list = list(map(str, x.split(",")))
+            args = []
+            for t in x_list:
+                args.append(enum(t))
+
+            return args
+
+        return any_of_enum
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('-s', '--size', default=None, type=tuple_type, help='size of the input images (height, width), inputs will be resized to given size')
@@ -188,10 +199,14 @@ def get_args(args=None):
     parser.add_argument('---tensorboard_port', type=int, default=6006, help='port on which to auto start tensorboard on')
 
     # tensorboard
-    parser.add_argument('--no_tensorboard', action='store_true', help='if specified, do not add callback for logging to tensorboard')
+    parser.add_argument('--no_tensorboard_metrics', action='store_true', help='dont show default metrics/losses in tensorboard')
     parser.add_argument('--tensorboard_val_images', action='store_true', help='show val images in tensorboard/wandb')
     parser.add_argument('--tensorboard_test_images', action='store_true', help='show test images in tensorboard/wandb')
-    parser.add_argument('--tensorboard_train_images_update_batch_freq', type=int, default=-1, help='show train images every n batch images in tensorboard/wandb. If -1, no images will be logged')
+    parser.add_argument('--tensorboard_train_images', action='store_true', help='show train images in tensorboard/wandb')
+
+    parser.add_argument('--tensorboard_train_images_update_batch_freq', type=int, default=1000,
+                        help='show train images every n batch images in tensorboard/wandb')
+
     parser.add_argument('-num_tb_imgs', '--num_tensorboard_images', type=int, default=3, help='number of images displayed in tensorboard')
     parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images [only used for test/val]')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
@@ -199,6 +214,7 @@ def get_args(args=None):
     parser.add_argument("--save_val_images", action='store_true', help='saves val images to logdir/val/samples')
     parser.add_argument("--save_train_images", action='store_true', help='saves val images to logdir/train/samples')
     parser.add_argument("--save_test_images", action='store_true', help='saves val images to logdir/test/samples')
+    parser.add_argument("-v", "--visualizations", type=any_enum, default=custom_callbacks.DEFAULT_VISUALIZATIONS)
     parser.add_argument("--tb_draw_contours", action='store_true', help='draw contours in tensorboard')
 
     # early stopping
@@ -293,7 +309,7 @@ def train_test_model(args, hparams=None, reporter=None):
         hyperparameters = [tf.convert_to_tensor([k, str(v)]) for k, v in vars(args).items()]
         tf.summary.text('hyperparameters', tf.stack(hyperparameters), step=0)
 
-    if not args.no_tensorboard:
+    if not args.no_tensorboard_metrics:
         callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=True, profile_batch=0,
                                                 write_images=False, write_grads=True, update_freq=args.tensorboard_update_freq))
 
@@ -508,48 +524,50 @@ def train_test_model(args, hparams=None, reporter=None):
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 
     # log images to tensorboard
-    if not args.no_tensorboard:
-        if args.tensorboard_train_images_update_batch_freq > 0:
-            train_ds_images = convert2tfdataset(ds, DataType.TRAIN) if args.train_on_generator else reader.get_dataset(DataType.TRAIN)
-            train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-            train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=100, shuffle=True, prefetch=False)
-            train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
-                                                                                 scaled_mask=scale_mask,
-                                                                                 binary_threshold=args.binary_threshold,
-                                                                                 save_images=args.save_train_images,
-                                                                                 mlflow_logging=not args.no_flow_log_images and args.mlflow,
-                                                                                 draw_contours=args.tb_draw_contours,
-                                                                                 update_freq=args.tensorboard_train_images_update_batch_freq)
-            callbacks.append(train_prediction_callback)
-            train_prediction_callback.on_batch_end(-1, {})
+    if (args.tensorboard_train_images and args.tensorboard_train_images_update_batch_freq > 0) or args.save_train_images:
+        train_ds_images = convert2tfdataset(ds, DataType.TRAIN) if args.train_on_generator else reader.get_dataset(DataType.TRAIN)
+        train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+        train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=100, shuffle=True, prefetch=False)
+        train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
+                                                                             scaled_mask=scale_mask,
+                                                                             binary_threshold=args.binary_threshold,
+                                                                             save_images=args.save_train_images,
+                                                                             mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                             visualizations=args.visualizations,
+                                                                             save_to_tensorboard=args.tensorboard_train_images,
+                                                                             update_freq=args.tensorboard_train_images_update_batch_freq)
+        callbacks.append(train_prediction_callback)
+        train_prediction_callback.on_batch_end(-1, {})
 
-        if args.tensorboard_val_images:
-            val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
-            val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-            val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            val_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
-                                                                               scaled_mask=scale_mask,
-                                                                               binary_threshold=args.binary_threshold,
-                                                                               save_images=args.save_val_images,
-                                                                               mlflow_logging=not args.no_flow_log_images and args.mlflow,
-                                                                               draw_contours=args.tb_draw_contours,
-                                                                               update_freq=args.tensorboard_images_freq)
-            callbacks.append(val_prediction_callback)
-            val_prediction_callback.on_epoch_end(-1, {})
+    if args.tensorboard_val_images or args.save_val_images:
+        val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
+        val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+        val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+        val_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
+                                                                           scaled_mask=scale_mask,
+                                                                           binary_threshold=args.binary_threshold,
+                                                                           save_images=args.save_val_images,
+                                                                           mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                           visualizations=args.visualizations,
+                                                                           save_to_tensorboard=args.tensorboard_val_images,
+                                                                           update_freq=args.tensorboard_images_freq)
+        callbacks.append(val_prediction_callback)
+        val_prediction_callback.on_epoch_end(-1, {})
 
-        if args.tensorboard_test_images:
-            test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
-            test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-            test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
-            test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
-                                                                                scaled_mask=scale_mask,
-                                                                                save_images=args.save_test_images,
-                                                                                binary_threshold=args.binary_threshold,
-                                                                                mlflow_logging=not args.no_flow_log_images and args.mlflow,
-                                                                                draw_contours=args.tb_draw_contours,
-                                                                                update_freq=args.tensorboard_images_freq)
-            callbacks.append(test_prediction_callback)
-            test_prediction_callback.on_epoch_end(-1, {})
+    if args.tensorboard_test_images or args.save_test_images:
+        test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
+        test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
+        test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+        test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
+                                                                            scaled_mask=scale_mask,
+                                                                            save_images=args.save_test_images,
+                                                                            binary_threshold=args.binary_threshold,
+                                                                            mlflow_logging=not args.no_flow_log_images and args.mlflow,
+                                                                            visualizations=args.visualizations,
+                                                                            save_to_tensorboard=args.tensorboard_test_images,
+                                                                            update_freq=args.tensorboard_images_freq)
+        callbacks.append(test_prediction_callback)
+        test_prediction_callback.on_epoch_end(-1, {})
 
     if args.start_tensorboard:
         kill_start_tensorboard(args.logdir, port=args.tensorboard_port)

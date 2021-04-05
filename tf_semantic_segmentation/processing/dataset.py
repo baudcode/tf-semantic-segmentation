@@ -182,7 +182,13 @@ def random_flip_lr(**args):
 def random_rot90(**args):
     condition = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
     for k, x in args.items():
-        x = tf.cond(condition, lambda: tf.image.rot90(x), lambda: x)
+        if len(x.shape) == 3:
+            x = tf.expand_dims(x, axis=-1)
+            x = tf.cond(condition, lambda: tf.image.rot90(x, 1), lambda: x)
+            x = tf.squeeze(x, axis=-1)
+        else:
+            x = tf.cond(condition, lambda: tf.image.rot90(x, 1), lambda: x)
+
         args[k] = x
     return args
 

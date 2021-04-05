@@ -114,8 +114,6 @@ class PredictionCallback(tf.keras.callbacks.Callback):
             self.samples_dir = None
         self.visualizations = visualizations
 
-        print(locals(), self.logdir_mode)
-
     def _log(self, input_batch, target_batch, step):
 
         if self.scaled_mask:

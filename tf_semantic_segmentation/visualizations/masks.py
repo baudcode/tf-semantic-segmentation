@@ -73,6 +73,7 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
         # remove channel dimension
         predictions = np.squeeze(predictions, axis=-1)
 
+    if len(predictions.shape) == 3:
         # set either zero or one
         predictions[predictions > binary_threshold] = 1.0
         predictions[predictions <= binary_threshold] = 0.0

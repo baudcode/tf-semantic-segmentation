@@ -10,7 +10,12 @@ import tempfile
 import time
 from tensorflow.keras import backend as K
 import os
-from .notify import slack
+try:
+    from .notify import slack
+    SLACK_IMPORT = True
+except:
+    logger.error("cannot import slack")
+    SLACK_IMPORT = False
 from enum import Enum
 
 
@@ -455,6 +460,9 @@ class NotificationCallback(tf.keras.callbacks.Callback):
         self.channel = channel
         self.run_name = run_name
         self.username = username
+
+        if not SLACK_IMPORT:
+            raise Exception("please install [notify] dependencies. pip install .[notify]")
 
         slack.divider(self.channel, self.token)
         slack.send_message('Starting run %s' % run_name, self.channel, self.token)

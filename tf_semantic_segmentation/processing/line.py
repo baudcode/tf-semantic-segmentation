@@ -11,7 +11,9 @@ from shapely.geometry import LineString, Point, GeometryCollection, Polygon
 from functools import reduce
 from tf_semantic_segmentation.visualizations.masks import get_rgb
 import copy
-from tf_semantic_segmentation.utils import logger
+import sys
+import traceback
+from ..utils import logger
 
 
 def get_contours_min_max(contours):
@@ -144,7 +146,7 @@ def get_edges_from_list(l: List[str], roundtrip: bool = False) -> List[Tuple[str
 
 def get_contour(g: nx.Graph):
     path = find_longest_path(g)
-    print("path: ", path)
+    logger.debug("path: %s" % path)
     points = [g.nodes[node]['point'] for node in path]
     return np.asarray(points)
 
@@ -162,7 +164,6 @@ def get_graph_from_lines(lines):
         points = np.asarray(l).reshape((-1, 2))
         u = "line_%d_0" % i
         v = "line_%d_1" % i
-        print(points[0], points[1])
         g.add_node(u, point=points[0])
         g.add_node(v, point=points[1])
         g.add_edge(u, v)
@@ -174,7 +175,7 @@ def get_graph_from_lines(lines):
         edges = g.edges([node])
 
         if len(edges) == 0:
-            print("FAIL")
+            logger.debug("FAIL no edges")
         if len(edges) == 2:
             continue
 
@@ -188,7 +189,7 @@ def get_graph_from_lines(lines):
                     closest_distance = distance
                     closest_node = node2
         if closest_node == None:
-            print("FAIL")
+            logger.debug("FAIL closest_node NULL")
 
         g.add_edge(node, closest_node)
     return g
@@ -222,8 +223,8 @@ def cluster_close_points(g: nx.Graph, eps: float = 15):
             continue
 
         centroid = np.mean(points, axis=0)
-        print("Reduce points", points)
-        print("Reduce nodes", cluster_nodes, "to centroid", centroid)
+        logger.debug("Reduce points: %s" % str(points))
+        logger.debug("Reduce nodes %s to centroid %s" % (str(cluster_nodes), str(centroid)))
         connected = set([v for node in cluster_nodes for v in g[node]])
         connected = connected - set(cluster_nodes)
 
@@ -300,7 +301,6 @@ def _create_channels(g: nx.Graph, buffer, bounds, step_size, max_steps):
                 continue
 
             if l.buffer(buffer).contains(lines[j]):
-                # print("match:")
                 # display(GeometryCollection([l.buffer(buffer), lines[j]]))
                 cluster.append(j)
                 found.append(j)
@@ -369,7 +369,7 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
 
     while has_channels:
         lines, edges, clusters, cluster_lengths, cluster_start_end = _create_channels(g, buffer, bounds, step_size, max_steps)
-        print("found %d clusters" % len(clusters))
+        logger.debug("found %d clusters" % len(clusters))
         if len(clusters) == 0:
             has_channels = False
         else:
@@ -383,8 +383,8 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
             unique_nodes = list(set([node for edge in cluster_edges for node in edge]))
             sorted_nodes = sorted(unique_nodes, key=lambda x: np.linalg.norm(g.nodes[x]['point'] - start))
             points = [g.nodes[n]['point'] for n in sorted_nodes]
-            print("points: ", np.asarray(points).tolist())
-            print("lines: ", [str(l) for l in cluster_lines])
+            logger.debug("points: %s" % str(np.asarray(points).tolist()))
+            logger.debug("lines: %s" % str([str(l) for l in cluster_lines]))
 
             start_v = find_unconnected(g, sorted_nodes)
             end_v = find_unconnected(g, list(reversed(sorted_nodes)))
@@ -395,20 +395,21 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
             start_node = sorted_nodes[start_idx]
             end_node = sorted_nodes[end_idx]
 
-            print("from ", start_node, "to", end_node)
+            logger.debug("from %s to %s" % (start_node, end_node))
 
-            print("deleting nodes", sorted_nodes)
+            logger.debug("deleting nodes %s" % str(sorted_nodes))
             for node in sorted_nodes:
                 g.remove_node(node)
 
-            print("adding node", start_node, "at", start)
-            print("adding node", end_node, "at", end)
+            logger.debug("adding start node %s at %s" % (start_node, str(start)))
+            logger.debug("adding start node %s at %s" % (end_node, str(end)))
+
             g.add_node(start_node, point=start)
             g.add_node(end_node, point=end)
             g.add_edges_from([(start_node, end_node), (end_node, end_v), (start_node, start_v)])
         # sort by len of lines
 
-    # print("found clusters: ", line_clusters)
+    # logger.debug("found clusters: ", line_clusters)
 
     # node_to_point = {n: g.nodes[n]['point'] for n in g.nodes}
     # original_edges = {n: [v for v in g[n]] for n in g.nodes}
@@ -419,27 +420,27 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
     #     if len(_lines) <= 1:
     #         continue
 
-    #     print("lines: ", _lines)
+    #     logger.debug("lines: ", _lines)
     #     cluster_edges = [edges[idx] for idx in idxs]
     #     unique_lines = list(line_merger(_lines))
 
-    #     print("found %d unique lines" % len(unique_lines))
+    #     logger.debug("found %d unique lines" % len(unique_lines))
     #     display(GeometryCollection(unique_lines))
 
     #     for li, ls in enumerate(unique_lines):
     #         start_point, end_point = get_start_end(ls)
-    #         print("[LINE STATUS] line %d from %s to %s" % (li, start_point, end_point))
+    #         logger.debug("[LINE STATUS] line %d from %s to %s" % (li, start_point, end_point))
 
     #         # sort all points on the same line according to distance
     #         valid_edges = {edge: lines[i] for i, edge in enumerate(cluster_edges) if _lines[i].intersects(ls)}
-    #         print("valid edges length=%d keys=%s" % (len(valid_edges), str(valid_edges.keys())))
+    #         logger.debug("valid edges length=%d keys=%s" % (len(valid_edges), str(valid_edges.keys())))
 
     #         unique_nodes = list(set([node for edge in valid_edges for node in edge]))
-    #         print("unique nodes: %s" % str(unique_nodes))
+    #         logger.debug("unique nodes: %s" % str(unique_nodes))
 
     #         # sort corners by distance to start_point
     #         sorted_nodes = sorted(unique_nodes, key=lambda x: np.linalg.norm(node_to_point[x] - start_point))
-    #         print("sorted (keeping first and last): ", sorted_nodes)
+    #         logger.debug("sorted (keeping first and last): ", sorted_nodes)
 
     #         start = sorted_nodes[0]
     #         end = sorted_nodes[-1]
@@ -460,23 +461,23 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
     #                 break
     #         # remove all other edges
 
-    #         print("start/end v: ", start_v, end_v)
+    #         logger.debug("start/end v: ", start_v, end_v)
     #         intermediate_nodes = sorted_nodes[1:-1]
 
     #         for node in sorted_nodes:
     #             sorted_node_edges = list(g.edges(node))
 
     #             for edge in sorted_node_edges:
-    #                 print("removing intermediate edge in cluster", edge)
+    #                 logger.debug("removing intermediate edge in cluster", edge)
     #                 g.remove_edge(*edge)
 
     #         # remove intermediate nodes
     #         for node in intermediate_nodes:
-    #             print("remove intermediate node", node)
+    #             logger.debug("remove intermediate node", node)
     #             if node in g:
     #                 g.remove_node(node)
 
-    #         print("adding edge from start to end of line cluster", start, end)
+    #         logger.debug("adding edge from start to end of line cluster", start, end)
     #         g.add_edge(start, end)
     #         g.add_edge(start, start_v)
     #         g.add_edge(end, end_v)
@@ -485,13 +486,13 @@ def create_channels(g: nx.Graph, size, step_size: int = 5, buffer: int = 15):
 
     #     for node in nodes:
     #         if len(g[node]) == 0:
-    #             print("removing node", node)
+    #             logger.debug("removing node", node)
     #             g.remove_node(node)
 
     return g
 
 
-def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tuple = (255, 0, 0), line_color: tuple = (0, 255, 0),
+def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tuple = (0, 0, 255), line_color: tuple = (0, 255, 0),
                line_thickness: int = 2, show: bool = False, message: str = None):
     contour = get_contour(g)
     image = mask.copy()
@@ -499,7 +500,6 @@ def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tupl
     for line in line_iterator_arr(contour):
         start, end = line
         # draw line
-        print(to_tuple(start), to_tuple(end), image.shape, image.dtype)
         cv2.line(image, to_tuple(start), to_tuple(end), line_color, thickness=line_thickness)
 
     for p in contour:
@@ -507,7 +507,7 @@ def draw_graph(mask: np.ndarray, g: nx.Graph, radius: int = 5, point_color: tupl
 
     if show:
         if message:
-            print(message)
+            logger.debug(message)
         display(Image.fromarray(image))
 
     return image
@@ -517,10 +517,13 @@ def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_thresh
     detector = cv2.ximgproc.createFastLineDetector()
     processed = []
     for i, mask in enumerate(masks):
-        mask = np.argmax(mask, axis=-1)
+        if mask.shape[-1] != 1:
+            mask = np.argmax(mask, axis=-1)
+
         mask[mask >= binary_threshold] = 255
         mask[mask < binary_threshold] = 0
         mask = mask.astype(np.uint8)
+
         lines = detector.detect(mask)
         image = get_rgb(draw_on[i].copy())
         try:
@@ -530,9 +533,8 @@ def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_thresh
 
             try:
                 g = cluster_close_points(g, eps=eps)
-                draw_graph(image, g, show=True, message='after clustering')
                 if debug:
-                    draw_graph(image, g, show=True)
+                    draw_graph(image, g, show=True, message='after clustering')
                 g = create_channels(copy.deepcopy(g), mask.shape[:2][::-1], buffer=buffer)
             except:
                 pass
@@ -540,11 +542,18 @@ def process_batch(masks, draw_on, buffer: int = 15, eps: int = 10, binary_thresh
             image = draw_graph(image, g, show=debug)
 
         except Exception as e:
-            print("error: %s" % str(e))
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            logger.debug("*** print_tb:")
+            traceback.print_tb(exc_traceback, limit=1, file=sys.stdout)
+            logger.debug("*** print_exception:")
+            # exc_type below is ignored on 3.5 and later
+            traceback.print_exception(exc_type, exc_value, exc_traceback,
+                                      limit=2, file=sys.stdout)
+            logger.debug("error: %s" % str(e))
+
             center = (image.shape[1] // 2, image.shape[0] // 2)
             cv2.putText(image, "Error", center, cv2.FONT_HERSHEY_SIMPLEX, 5, (255, 0, 0), thickness=5)
 
-        print(image.max(), image.min(), image.dtype, image.shape)
         processed.append(image)
 
     return np.asarray(processed)

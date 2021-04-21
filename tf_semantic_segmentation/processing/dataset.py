@@ -26,14 +26,19 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
         # len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2 seems to be a wierd hack when width and height
         # are not defined
         is2d = False
-        if len(tf.shape(image)) == 2 or (len(tf.shape(image)) == 1 and tf.shape(image)[0] == 2):
+        if len(tf.shape(image).shape) < 2:
+            shape = image.shape
+        else:
+            shape = tf.shape(image)
+
+        if len(shape) == 2 or (len(shape) == 1 and shape[0] == 2):
             image = tf.expand_dims(image, axis=-1)
             is2d = True
 
-        if color_mode == ColorMode.RGB and (tf.shape(image)[-1] == 1 or is2d):
+        if color_mode == ColorMode.RGB and (shape[-1] == 1 or is2d):
             image = tf.image.grayscale_to_rgb(image)
 
-        elif color_mode == ColorMode.GRAY and tf.shape(image)[-1] != 1:
+        elif color_mode == ColorMode.GRAY and shape[-1] != 1:
             image = tf.image.rgb_to_grayscale(image)
 
     elif mode == 'eager':

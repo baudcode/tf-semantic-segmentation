@@ -420,6 +420,9 @@ def train_test_model(args, hparams=None, reporter=None):
             raise Exception("record_dir cannot be None when trying to read record files")
 
         input_shape = TFReader(record_dir, options=args.record_options).input_shape
+        if input_shape is None:
+            raise Exception("record dir is invalid")
+
         input_shape = (input_shape[0], input_shape[1], 3 if args.color_mode == ColorMode.RGB else 1)
 
     logger.info("input shape: %s" % str(input_shape))

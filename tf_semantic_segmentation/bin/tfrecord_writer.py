@@ -9,18 +9,20 @@ import os
 
 
 def write_records_from_directory(directory, record_dir, size=None, color_mode=ColorMode.NONE,
-                                 resize_method='resize', num_examples_per_record=100, overwrite=False):
+                                 resize_method='resize', num_examples_per_record=100, overwrite=False,
+                                 options: str = "GZIP"):
     ds = DirectoryDataset(directory)
 
     if record_dir is None:
         raise AssertionError("record_dir cannot be None")
 
     write_records(ds, record_dir, size=size, color_mode=color_mode, resize_method=resize_method,
-                  num_examples_per_record=num_examples_per_record, overwrite=overwrite)
+                  num_examples_per_record=num_examples_per_record, overwrite=overwrite, options=options)
 
 
 def write_records_from_dataset_name(dataset, data_dir, record_dir=None, size=None, color_mode=ColorMode.NONE,
-                                    resize_method='resize', num_examples_per_record=100, overwrite=False, data_dir_as_cache=False):
+                                    resize_method='resize', num_examples_per_record=100, overwrite=False, data_dir_as_cache=False,
+                                    options: str = "GZIP"):
 
     if data_dir_as_cache:
         cache_dir = data_dir
@@ -36,20 +38,20 @@ def write_records_from_dataset_name(dataset, data_dir, record_dir=None, size=Non
         record_dir = os.path.join(cache_dir, 'records', dataset.lower())
 
     write_records(ds, record_dir, size=size, color_mode=color_mode, resize_method=resize_method,
-                  num_examples_per_record=num_examples_per_record, overwrite=overwrite)
+                  num_examples_per_record=num_examples_per_record, overwrite=overwrite, options=options)
 
     return record_dir
 
 
 def write_records(ds, record_dir, size=None, color_mode=ColorMode.NONE, resize_method='resize',
-                  num_examples_per_record=100, overwrite=False):
+                  num_examples_per_record=100, overwrite=False, options: str = "GZIP"):
 
     def preprocess_fn(image, mask):
         image = tf.image.convert_image_dtype(image, tf.float32)
         return resize_and_change_color(image, mask, size, color_mode, resize_method)
 
     logger.info('wrting records to %s' % record_dir)
-    writer = TFWriter(record_dir)
+    writer = TFWriter(record_dir, options=options)
     writer.write(ds, overwrite=overwrite, num_examples_per_record=num_examples_per_record, preprocess_fn=preprocess_fn)
 
     # validate number of examples written
@@ -68,6 +70,7 @@ def main():
     parser.add_argument('-s', '--size', default=None, type=lambda x: list(map(int, x.split(','))), help='height,width')
     parser.add_argument('-rm', '--resize_method', default='resize')
     parser.add_argument('-cm', '--color_mode', default=ColorMode.NONE, type=int)
+    parser.add_argument('--no_compression', action='store_true')
 
     parser.add_argument('-o', '--overwrite', action='store_true')
     parser.add_argument('-ddac', '--data_dir_as_cache', action='store_true')
@@ -76,13 +79,15 @@ def main():
     if args.directory is None and args.dataset is None:
         raise AssertionError("please either supply a dataset or a directory containing your data")
 
+    options = "" if args.no_compression else "GZIP"
+
     if args.dataset:
         assert(args.data_dir is not None), "data_dir argument is required"
         write_records_from_dataset_name(args.dataset, args.data_dir, args.record_dir, args.size, args.color_mode, args.resize_method,
-                                        args.num_examples_per_record, args.overwrite, args.data_dir_as_cache)
+                                        args.num_examples_per_record, args.overwrite, args.data_dir_as_cache, options=options)
     else:
         write_records_from_directory(args.directory, args.record_dir, args.size, args.color_mode, args.resize_method,
-                                     args.num_examples_per_record, args.overwrite)
+                                     args.num_examples_per_record, args.overwrite, options=options)
 
 
 if __name__ == "__main__":

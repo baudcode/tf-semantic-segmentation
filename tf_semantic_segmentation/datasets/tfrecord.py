@@ -8,6 +8,7 @@ import tqdm
 import multiprocessing
 import numpy as np
 
+
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
     # If the value is an eager tensor BytesList won't unpack a string from an EagerTensor.
@@ -82,7 +83,7 @@ class TFReader:
 
     def num_examples(self, data_type):
         return sum([1 for _ in self.get_dataset(data_type)])
-    
+
     def num_examples_and_mean(self, data_type):
         examples = 0
         mean = []
@@ -93,7 +94,6 @@ class TFReader:
             mean.append(means)
             examples += 1
         return examples, np.mean(mean, axis=0)
-
 
     @property
     def size(self):

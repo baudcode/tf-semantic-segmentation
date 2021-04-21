@@ -123,15 +123,15 @@ def convert2tfdataset(dataset, data_type, randomize=True):
 def load_image(image_path, dtype, squeeze=True, channels=3):
     image_string = tf.io.read_file(image_path)
     image = tf.cond(
-      tf.image.is_jpeg(image_string),
-      lambda: tf.image.decode_jpeg(image_string, channels=channels),
-      lambda: tf.image.decode_png(image_string, channels=channels))
+        tf.image.is_jpeg(image_string),
+        lambda: tf.image.decode_jpeg(image_string, channels=channels),
+        lambda: tf.image.decode_png(image_string, channels=channels))
 
     image = tf.image.convert_image_dtype(image, dtype)
-    
+
     if squeeze and channels == 1:
         image = tf.squeeze(image, axis=-1)
-    
+
     return image
 
 

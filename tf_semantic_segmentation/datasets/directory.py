@@ -7,6 +7,7 @@ import os
 import tensorflow as tf
 import random
 
+
 class DirectoryDataset(Dataset):
 
     def __init__(self, directory, rand=0.2, extensions=['png', 'jpg', 'jpeg']):
@@ -71,11 +72,10 @@ class DirectoryDataset(Dataset):
     def raw(self):
         return self.split
 
-
     def tfdataset(self, data_type=DataType.TRAIN, randomize=False):
 
         data = self.raw()[data_type]
-        
+
         if randomize:
             random.shuffle(data)
 
@@ -98,17 +98,26 @@ class DirectoryDataset(Dataset):
         dataset = tf.data.Dataset.zip((images_ds, masks_ds, num_classes_ds))
         return dataset
 
+
 if __name__ == "__main__":
     from ..processing import dataset
     from .utils import convert2tfdataset
     from ..visualizations import show
     import numpy as np
-    ds = DirectoryDataset('output')
-    
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", required=True)
+    args = parser.parse_args()
+
+    ds = DirectoryDataset(args.i)
+
     tfds = convert2tfdataset(ds, DataType.TRAIN)
     fn = dataset.get_preprocess_fn((128, 128), 0, 'resize', True, mode='eager')
     tfds = tfds.map(fn)
-    for image, mask in tfds:
+
+    for i, (image, mask) in enumerate(tfds):
         show.show_images([image.numpy(), mask.numpy().astype(np.float32)])
         print(image.shape, mask.shape)
-        break
+        if i == 10:
+            break

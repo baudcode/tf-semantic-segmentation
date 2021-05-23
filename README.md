@@ -243,7 +243,7 @@ There are the following addition arguments:
 
 - -s [--size] '$width,$height' (f.e. "512,512")
 - -rm [--resize_method] ('resize', 'resize_with_pad', 'resize_with_crop_or_pad)
-- cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
+- -cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
 
 
 
@@ -407,7 +407,7 @@ sudo apt-get update && apt-get install tensorflow-model-server
 ### using a single model
 tensorflow_model_server --rest_api_port=8501 --model_base_path=/home/user/models/mymodel/saved_model
 
-### or using an ensamble of multiple models
+### or using an ensemble of multiple models
 
 # helper to write the ensamble config yaml file (models/ contains multiple logdirs/, logdir must contain the name 'unet')
 python -m tf_semantic_segmentation.bin.model_server_config_writer -d models/ -c 'unet'
@@ -415,7 +415,7 @@ python -m tf_semantic_segmentation.bin.model_server_config_writer -d models/ -c 
 tensorflow_model_server --model_config_file=models.yaml --rest_api_port=8501
 ```
 
-### **Compare models and ensemnble**
+### **Compare models and ensemble**
 
 ```bash
 python -m tf_semantic_segmentation.evaluation.compare_models -i logs/ -c 'taco' -data /hdd/datasets/ -d 'tacobinary'
@@ -459,7 +459,7 @@ p = predict(image.numpy(), host='localhost', port=8501, input_name='input_1', mo
 # prediction on batch (for faster prediction of multiple images)
 p = predict_on_batch([image], host='localhost', port=8501, input_name='input_1', model_name='0')
 
-# ensamble prediction (average the predictions of multiple models)
+# ensemble prediction (average the predictions of multiple models)
 
 # either specify models like this:
 models = [
@@ -480,7 +480,7 @@ models = [
 # or load from models in directory (models/) that contain the name 'unet'
 models = get_models_from_directory('models/', contains='unet')
 
-# returns the ensamble and all predictions made
+# returns the ensemble and all predictions made
 ensamble, predictions = ensamble_prediction(models, image.numpy(), host='localhost', port=8501)
 ```
 

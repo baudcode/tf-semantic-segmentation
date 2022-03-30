@@ -22,7 +22,7 @@ def show_images(images, cols=1, titles=None, show=True):
         titles = ['Image (%d)' % i for i in range(1, n_images + 1)]
     fig = plt.figure()
     for n, (image, title) in enumerate(zip(images, titles)):
-        a = fig.add_subplot(cols, np.ceil(n_images / float(cols)), n + 1)
+        a = fig.add_subplot(cols, int(np.ceil(n_images / float(cols))), n + 1)
         if image.ndim == 3 and image.shape[2] == 1:
             image = np.squeeze(image, axis=2)
             gray = True

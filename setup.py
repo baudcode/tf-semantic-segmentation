@@ -59,7 +59,7 @@ with open("extra_requirements.txt", 'r') as h:
 
 extras = {
     "extra": extra_requirements,
-    "notify": ["slackclient", 'mlflow']
+    "notify": ["slackclient", 'mlflow', "boto3"]
 }
 
 setuptools.setup(

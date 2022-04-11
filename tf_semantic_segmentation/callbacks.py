@@ -157,9 +157,9 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                         # cannot log at step 0, because the run was not yet created
                         import mlflow
                         try:
-                            mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%d.jpg" % (step)))
-                        except:
-                            logger.error("could not log image for %s" % self.logdir_mode)
+                            mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%09d.jpg" % (step)))
+                        except Exception as e:
+                            logger.error("could not log image for %s - %s" % (self.logdir_mode, str(e)))
 
             def visualize_input_with_predictions():
                 predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)

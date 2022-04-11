@@ -614,6 +614,8 @@ def train_test_model(args, hparams=None, reporter=None):
             mlflow.set_tracking_uri(args.mlflow_tracking_uri)
         if args.mlflow_registry_uri:
             mlflow.set_registry_uri(args.mlflow_registry_uri)
+        if args.mlflow_experiment_id:
+            experiment_id = args.mlflow_experiment_id
 
         elif args.mlflow_experiment:
             try:
@@ -634,7 +636,7 @@ def train_test_model(args, hparams=None, reporter=None):
         if experiment_id or args.run_name:
             run = mlflow.start_run(experiment_id=experiment_id, run_name=args.run_name)
             logger.info("mlflow run id=%s" % (run.info.run_id))
-        mlflow.tensorflow.autolog()
+        mlflow.tensorflow.autolog(every_n_iter=1)
         mlflow.log_params(params)
         try:
             mlflow.log_param('num_gpus', len(tf.config.list_physical_devices(device_type='GPU')))

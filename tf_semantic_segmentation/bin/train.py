@@ -243,9 +243,13 @@ def get_args(args=None):
     # mlflow
     parser.add_argument('-flow', '--mlflow', action='store_true', help='enable mlflow auto logging')
     parser.add_argument('-flow_exp', '--mlflow_experiment', help='mlflow experiment name, will create the experiment if it does not exist and ignored if mlflow_experiment_id is specified')
-    parser.add_argument("-flow_exp_id", "--mlflow_experiment_id", help='id to the mlflow experiment', default=None)
+    parser.add_argument("-flow_exp_id", "--mlflow_experiment_id", help='id to the mlflow experiment', default=None, type=int)
+    parser.add_argument("-flow_every", "--mlflow_log_every", help='log metrics every x batches', default=100, type=int)
+
     parser.add_argument('-flow_trackuri', '--mlflow_tracking_uri', help='tracking uri to the mlflow client', default=None)
     parser.add_argument('-flow_reguri', '--mlflow_registry_uri', help='registry uri to the mlflow client', default=None)
+    parser.add_argument('-flow_monitor', '--mlflow_monitor_metric', help='metric to monitor and log models', default="val_loss")
+
     parser.add_argument("--no_flow_log_images", action='store_true', help='do not log images when tensorboard is enabled')
 
     # notifications
@@ -479,7 +483,7 @@ def train_test_model(args, hparams=None, reporter=None):
             model.load_weights(args.model_weights)
 
         multiscale = []
-        
+
         if len(model.outputs) > 1:
             outputs = []
 
@@ -627,13 +631,12 @@ def train_test_model(args, hparams=None, reporter=None):
         import mlflow
         from mlflow.exceptions import MlflowException
 
-        if args.mlflow_experiment_id:
-            experiment_id = args.mlflow_experiment_id
-
         if args.mlflow_tracking_uri:
             mlflow.set_tracking_uri(args.mlflow_tracking_uri)
+
         if args.mlflow_registry_uri:
             mlflow.set_registry_uri(args.mlflow_registry_uri)
+
         if args.mlflow_experiment_id:
             experiment_id = args.mlflow_experiment_id
 
@@ -654,10 +657,13 @@ def train_test_model(args, hparams=None, reporter=None):
         params = {k: str(v) for k, v in vars(args).items()}
 
         if experiment_id or args.run_name:
+            logger.info(f"starting mlflow run with experiment_id={experiment_id}")
             run = mlflow.start_run(experiment_id=experiment_id, run_name=args.run_name)
             logger.info("mlflow run id=%s" % (run.info.run_id))
-        mlflow.tensorflow.autolog(every_n_iter=1)
+
         mlflow.log_params(params)
+        callbacks.append(custom_callbacks.MLFlowCallback(every=args.mlflow_log_every, monitor_metric=args.mlflow_monitor_metric))
+
         try:
             mlflow.log_param('num_gpus', len(tf.config.list_physical_devices(device_type='GPU')))
             for key, value in get_gpu_stats().items():
@@ -670,6 +676,9 @@ def train_test_model(args, hparams=None, reporter=None):
     # model fitting
     history = model.fit(train_ds, steps_per_epoch=steps_per_epoch, validation_data=val_ds, validation_steps=validation_steps,
                         callbacks=callbacks, epochs=args.epochs, validation_freq=args.validation_freq)
+
+    if args.mlflow:
+        mlflow.end_run()
 
     if not args.no_evaluate:
         results = model.evaluate(val_ds, steps=validation_steps)

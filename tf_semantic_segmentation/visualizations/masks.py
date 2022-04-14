@@ -35,11 +35,26 @@ def apply_mask(image, mask, color, alpha=0.5):
     return image
 
 
+def apply_mask_v2(image, mask, color, alpha=0.5):
+    from PIL import Image
+
+    base_layer = Image.fromarray(image)
+
+    # create color and alpha layer
+    color_layer = Image.new('RGBA', base_layer.size, tuple(color))
+    mask = mask.astype(np.uint8) * int(255 * alpha)
+    alpha_mask = Image.fromarray(mask, mode='L')
+
+    # composite
+    base_layer = Image.composite(color_layer, base_layer, alpha_mask)
+    return np.asarray(base_layer)
+
+
 def overlay_classes(image, target, colors, num_classes, alpha=0.5):
-    assert(len(colors) == num_classes)
-    for k, color in enumerate(colors):
+    assert(len(colors) == (num_classes - 1))
+    for k in range(1, num_classes):
         mask = np.where(target == k, 1, 0)
-        image = apply_mask(image, mask, color, alpha=alpha)
+        image = apply_mask_v2(image, mask, colors[k - 1], alpha=alpha)
     return image
 
 
@@ -53,11 +68,15 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
     binary_threshold: float - when predicting only 1 value, threshold to set label to 1
     alpha: float - overlay percentage
     """
+
     predictions = predictions.copy()
-    colors = get_colors(num_classes)
+    colors = get_colors(num_classes)[1:]
 
     if images is None:
-        shape = (predictions.shape[0], predictions.shape[1], predictions.shape[2], 3)
+        if isinstance(predictions, list):
+            shape = (predictions[-1].shape[0], predictions[-1].shape[1], predictions[-1].shape[2], 3)
+        else:
+            shape = (predictions.shape[0], predictions.shape[1], predictions.shape[2], 3)
         images = np.zeros(shape, np.uint8)
     else:
         images = images.copy()
@@ -69,24 +88,42 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
             images = [cv2.cvtColor(i.copy(), cv2.COLOR_GRAY2RGB) for i in images]
             images = np.asarray(images)
 
-    if predictions.shape[-1] == 1:
-        # remove channel dimension
-        predictions = np.squeeze(predictions, axis=-1)
+    if not isinstance(predictions, list):
+        predictions = [predictions]
 
-    if len(predictions.shape) == 3:
-        # set either zero or one
-        predictions[predictions > binary_threshold] = 1.0
-        predictions[predictions <= binary_threshold] = 0.0
-    else:
-        # find the argmax channel from all channels
-        predictions = np.argmax(predictions, axis=-1)
+    outputs = {}
 
-    predictions = predictions.astype(np.uint8)
+    # for every resolution
+    for p in predictions:
 
-    for i in range(len(predictions)):
-        images[i, :, :, :] = overlay_classes(images[i, :, :, :].copy(), predictions[i], colors, num_classes, alpha=alpha)
+        overlays = []
 
-    return images
+        if p.shape[-1] == 1:
+            # remove channel dimension
+            p = np.squeeze(p, axis=-1)
+
+        if len(p.shape) == 3:
+            # set either zero or one
+            p[p > binary_threshold] = 1.0
+            p[p <= binary_threshold] = 0.0
+        else:
+            # find the argmax channel from all channels
+            p = np.argmax(p, axis=-1)
+
+        p = p.astype(np.uint8)
+
+        for i in range(len(p)):
+            size = p[i].shape[:2][::-1]
+            image_resized = cv2.resize(images[i, :, :, :].copy(), tuple(size), interpolation=cv2.INTER_CUBIC)
+
+            o = overlay_classes(image_resized, p[i], colors, num_classes, alpha=alpha)
+            overlays.append(o)
+
+        shape = p.shape[:2][::-1]
+        shape = "x".join(map(str, shape))
+        outputs[shape] = overlays
+
+    return outputs
 
 
 def get_rgb(mask):

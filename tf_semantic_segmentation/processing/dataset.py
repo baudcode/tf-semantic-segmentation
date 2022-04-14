@@ -86,7 +86,19 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
     return image, mask
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='graph'):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, multiscale=[], mode='graph'):
+
+    @tf.function
+    def process_mask(mask, num_classes):
+        if scale_mask:
+            num_classes = tf.cast(num_classes, tf.float32)
+            mask = tf.cast(mask, tf.float32)
+            mask = mask / (num_classes - 1.0)
+        else:
+            num_classes = tf.cast(num_classes, tf.int32)  # cast for onehot to accept it
+            mask = tf.cast(mask, tf.int64)
+            mask = tf.one_hot(mask, num_classes)
+        return mask
 
     @tf.function
     def map_fn(image, mask, num_classes):
@@ -96,16 +108,28 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='g
 
         # resize method for image create float32 image anyway
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
-        if scale_mask:
-            num_classes = tf.cast(num_classes, tf.float32)
-            mask = tf.cast(mask, tf.float32)
-            mask = mask / (num_classes - 1.0)
-        else:
-            num_classes = tf.cast(num_classes, tf.int32)  # cast for onehot to accept it
-            mask = tf.cast(mask, tf.int64)
-            mask = tf.one_hot(mask, num_classes)
+        mask = process_mask(mask, num_classes)
 
-        return image, mask
+        if len(multiscale) > 0:
+            print("apply multiscaling to output masks")
+
+            outputs = {}
+            for i, multi_scale_size in enumerate(multiscale):
+                size_format = "x".join(map(str, multi_scale_size))
+                print(f"target size[{i}]: {multi_scale_size}")
+
+                scaled_output = tf.image.resize(tf.expand_dims(mask, axis=-1), multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                scaled_output = tf.squeeze(scaled_output, axis=-1)
+
+                if tuple(multi_scale_size) != tuple(size):
+                    outputs[f'predictions_{size_format}'] = scaled_output
+                else:
+                    outputs[f'predictions'] = scaled_output
+
+            return image, outputs
+        else:
+
+            return image, mask
 
     return map_fn
 
@@ -139,6 +163,7 @@ def select_patch(image, mask, patch_size, color_mode):
 
 def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
 
+    print(locals())
     if num_workers > 1:
         dataset = dataset.shard(num_workers, worker_index)
 
@@ -157,7 +182,7 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
         dataset = dataset.repeat()
 
     # `tf.data.Options()` object then setting `options.experimental_distribute.auto_shard_policy = AutoShardPolicy.DATA`
-    if utils.tf_version_gt_eq('2.4'):
+    if num_workers > 1 and utils.tf_version_gt_eq('2.4'):
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
         dataset = dataset.with_options(options)

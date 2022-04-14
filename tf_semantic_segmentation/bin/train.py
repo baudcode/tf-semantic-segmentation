@@ -478,8 +478,27 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
 
-        model = Model(model.input, Activation(args.final_activation, dtype='float32', name='predictions')(model.output))
-        logger.info("output shape: %s" % model.output.shape)
+        multiscale = []
+        
+        if len(model.outputs) > 1:
+            outputs = []
+
+            for o in model.outputs:
+                try:
+                    size = o.name.split("/")[0].split("_")[1]
+                    name = f"predictions_{size}"
+                except:
+                    name = "predictions"
+
+                multiscale.append(o.shape[1:3][::-1])
+                outputs.append(Activation(args.final_activation, dtype='float32', name=name)(o))
+
+            print("model outputs: ", outputs)
+            model = Model(model.input, outputs)
+        else:
+            model = Model(model.input, Activation(args.final_activation, dtype='float32', name='predictions')(model.output))
+            logger.info("output shape: %s" % model.output.shape)
+
         logger.info("input shape: %s" % model.input.shape)
 
         # loss and metrics
@@ -509,7 +528,8 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("building input pipeline")
     # train preprocessing
-    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
+
+    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if len(args.augmentations) == 0:
@@ -521,7 +541,7 @@ def train_test_model(args, hparams=None, reporter=None):
     train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
-    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask)
+    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 

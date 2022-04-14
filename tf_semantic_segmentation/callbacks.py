@@ -484,3 +484,53 @@ class NotificationCallback(tf.keras.callbacks.Callback):
             slack.send_metrics(epoch, self.run_name, logs, self.channel, self.token)
         except Exception as e:
             logger.error("could not send metrics to slack: %s" % str(e))
+
+
+class MLFlowCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, every: int = 1000, monitor_metric: str = "val_iou_score"):
+        super(MLFlowCallback, self).__init__()
+        logger.info("Initialize MLFlow callback")
+        self.every = every
+        self.global_step = 0
+        self.epoch = 0
+        self.monitor_metric = monitor_metric
+        self.history = []
+        self.max_metric = 0
+
+    def on_batch_end(self, step, logs=None):
+
+        try:
+            if self.global_step % self.every == 0:
+                import mlflow
+                mlflow.log_metrics(logs, self.global_step)
+        except Exception as e:
+            logger.error("could not send metrics to mlflow: %s" % str(e))
+        finally:
+            self.global_step += 1
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch = epoch
+
+    def on_epoch_end(self, epoch, logs=None):
+
+        self.history.append(logs)
+        current_max_metric = max([x[self.monitor_metric] for x in self.history])
+
+        try:
+            import mlflow
+            metrics = {f"epoch-{k}": v for k, v in logs.items()}
+            mlflow.log_metrics(metrics, epoch)
+
+            if current_max_metric > self.max_metric:
+                self.max_metric = current_max_metric
+                logger.info("logging model")
+
+                try:
+                    mlflow.keras.log_model(self.model, 'model_' + self.monitor_metric + '_' + str(current_max_metric))
+                except:
+                    logger.info("couldn't log mlflow model")
+                    pass
+
+        except Exception as e:
+            logger.error("could not send metrics to mlflow: %s" % str(e))

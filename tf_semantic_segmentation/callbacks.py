@@ -32,9 +32,7 @@ class Visualization(str, Enum):
 
 
 DEFAULT_VISUALIZATIONS = [
-    Visualization.INPUTS_WTIH_PREDICTIONS,
-    Visualization.TARGETS,
-    Visualization.PREDICTIONS
+    Visualization.INPUTS_WTIH_PREDICTIONS
 ]
 
 
@@ -117,7 +115,11 @@ class PredictionCallback(tf.keras.callbacks.Callback):
     def _log(self, input_batch, target_batch, step):
 
         if self.scaled_mask:
-            target_batch = np.expand_dims(target_batch, axis=-1)
+            if isinstance(target_batch, dict):
+                for k, v in target_batch.items():
+                    target_batch[k] = np.expand_dims(v, axis=-1)
+            else:
+                target_batch = np.expand_dims(target_batch, axis=-1)
 
         batch_size = input_batch.shape[0]
 
@@ -127,39 +129,47 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
         with self.summary_writer.as_default():
 
-            def add_images(name, images):
-                # make one image
-                images = tf.split(images, num_or_size_splits=batch_size, axis=0)
-                image = tf.concat(images, axis=2)
+            def add_images(base_name: str, images_dict: dict):
 
-                if self.save_to_tensorboard:
-                    tf.summary.image(name, image, step=step, max_outputs=batch_size)
+                for size, images in images_dict.items():
 
-                if self.samples_dir != None or self.mlflow_logging:
-                    name = name.replace("/", "-")
+                    if len(list(images_dict.values())) == 1:
+                        name = base_name
+                    else:
+                        name = f"{base_name}-{size}"
 
-                    try:
-                        image = image.numpy()
-                    except:
-                        pass
+                    # make one image
+                    images = tf.split(images, num_or_size_splits=batch_size, axis=0)
+                    image = tf.concat(images, axis=2)
 
-                    if image.dtype == np.float32:
-                        image = (image * 255).astype(np.uint8)
+                    if self.save_to_tensorboard:
+                        tf.summary.image(name, image, step=step, max_outputs=batch_size)
 
-                    # reduce batch dim
-                    img = image[0]
+                    if self.samples_dir != None or self.mlflow_logging:
+                        name = name.replace("/", "-")
 
-                    if self.samples_dir:
-                        path = os.path.join(self.samples_dir, "%d-%s.jpg" % (step, name))
-                        imageio.imwrite(path, img)
-
-                    if self.mlflow_logging and step != 0:
-                        # cannot log at step 0, because the run was not yet created
-                        import mlflow
                         try:
-                            mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%09d.jpg" % (step)))
-                        except Exception as e:
-                            logger.error("could not log image for %s - %s" % (self.logdir_mode, str(e)))
+                            image = image.numpy()
+                        except:
+                            pass
+
+                        if image.dtype == np.float32:
+                            image = (image * 255).astype(np.uint8)
+
+                        # reduce batch dim
+                        img = image[0]
+
+                        if self.samples_dir:
+                            path = os.path.join(self.samples_dir, "%d-%s.jpg" % (step, name))
+                            imageio.imwrite(path, img)
+
+                        if self.mlflow_logging and step != 0:
+                            # cannot log at step 0, because the run was not yet created
+                            import mlflow
+                            try:
+                                mlflow.log_image(img, os.path.join(self.logdir_mode, name, "%09d.jpg" % (step)))
+                            except Exception as e:
+                                logger.error("could not log image for %s - %s" % (self.logdir_mode, str(e)))
 
             def visualize_input_with_predictions():
                 predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
@@ -178,15 +188,19 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                 add_images(Visualization.PREDICTIONS_RGB, pred_rgb)
 
             def visualize_targets():
-                target_batch_copy = target_batch.copy()
-                if not self.scaled_mask:
-                    target_batch_copy = np.argmax(target_batch_copy, axis=-1).astype(np.float32)
-                    target_batch_copy = np.expand_dims(target_batch_copy, axis=-1)
-                else:
-                    pass
+                target_dict = target_batch if isinstance(target_batch, dict) else {"targets": target_batch}
+                for k, v in target_dict.items():
+                    target_batch_copy = v.copy()
+                    if not self.scaled_mask:
+                        target_batch_copy = np.argmax(target_batch_copy, axis=-1).astype(np.float32)
+                        target_batch_copy = np.expand_dims(target_batch_copy, axis=-1)
+                    else:
+                        pass
 
-                target_batch_copy = (target_batch_copy * 255. / (self.num_classes - 1)).astype(np.uint8)
-                add_images(Visualization.TARGETS.value, target_batch_copy)
+                    target_batch_copy = (target_batch_copy * 255. / (self.num_classes - 1)).astype(np.uint8)
+                    target_dict[k] = target_batch_copy
+
+                add_images(Visualization.TARGETS.value, target_dict)
 
             def visualize_predictions():
                 pred_batch_copy = pred_batch.copy()
@@ -216,7 +230,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                     logger.warn("cannot log inputs with contours when num_classes != 2")
 
             vis2call = {
-                Visualization.INPUTS: lambda: add_images(Visualization.INPUTS.value, input_batch),
+                Visualization.INPUTS: lambda: add_images(Visualization.INPUTS.value, {"inputs": input_batch}),
                 Visualization.INPUTS_WTIH_PREDICTIONS: visualize_input_with_predictions,
                 Visualization.INPUTS_WITH_TARGETS: visualize_inputs_with_targets,
                 Visualization.TARGETS_RGB: visualize_targets_rgb,
@@ -229,9 +243,6 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
             for vis in self.visualizations:
                 vis2call[vis]()
-
-            add_images('inputs', input_batch)
-            # colored
 
     @ property
     def logdir_mode(self):

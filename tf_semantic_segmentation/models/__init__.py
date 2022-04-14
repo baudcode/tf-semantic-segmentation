@@ -1,6 +1,6 @@
 from .erfnet import erfnet
 from .unet import unet
-from .imagenet_unet import unet_mobilenet, unet_inception_resnet_v2, unet_resnet
+from .imagenet_unet import unet_mobilenet, unet_inception_resnet_v2, unet_resnet, unet_mobilenet_multiscale
 from .satellite_unet import satellite_unet
 from .multires_unet import multires_unet
 from .attention_unet import attention_unet
@@ -18,6 +18,7 @@ models_by_name = {
     "erfnet": erfnet,
     "unet": unet,
     "unet_mobilenet": unet_mobilenet,
+    "unet_mobilenet_multiscale": unet_mobilenet_multiscale,
     "unet_inception_resnet_v2": unet_inception_resnet_v2,
     "unet_resnet": unet_resnet,
     "satellite_unet": satellite_unet,

@@ -1,9 +1,11 @@
 """ Code adopted from https://github.com/killthekitten/kaggle-carvana-2017/blob/master/models.py"""
+from base64 import encode
 from tensorflow.keras.layers import Conv2D, UpSampling2D, Conv2DTranspose, Activation, SpatialDropout2D, BatchNormalization, MaxPooling2D
 from tensorflow.keras.models import Model
 from tensorflow.keras import Input
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras import backend as K
+from tf_semantic_segmentation.models.erfnet import conv
 
 from .apps import resnet50, mobilenet, inception
 
@@ -73,7 +75,11 @@ def unet_resnet(input_shape=(256, 256, 3), num_classes=8, encoder_weights='image
     return model
 
 
-def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='imagenet'):
+def unet_mobilenet_multiscale(input_shape=(256, 256, 3), num_classes=3, encoder_weights='imagenet'):
+    return unet_mobilenet(input_shape=input_shape, num_classes=num_classes, encoder_weights=encoder_weights, multiscale=True)
+
+
+def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='imagenet', multiscale=False):
     base_model = mobilenet.MobileNet(include_top=False, input_shape=input_shape, weights=encoder_weights)
 
     conv1 = base_model.get_layer('conv_pw_1_relu').output
@@ -86,17 +92,35 @@ def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='im
     conv6 = conv_block_simple(up6, 256, "conv6_1")
     conv6 = conv_block_simple(conv6, 256, "conv6_2")
 
+    outputs = []
+
+    def make_stage_output(conv_in):
+        if not multiscale:
+            return
+
+        shape = conv_in.shape[1:3][::-1]
+        shape = "x".join(map(str, shape))
+        outputs.append(Conv2D(num_classes, (1, 1), activation=None, name=f"prediction_{shape}")(conv_in))
+
+    make_stage_output(conv6)
+
     up7 = K.concatenate([UpSampling2D()(conv6), conv3], axis=-1)
     conv7 = conv_block_simple(up7, 256, "conv7_1")
     conv7 = conv_block_simple(conv7, 256, "conv7_2")
+
+    make_stage_output(conv7)
 
     up8 = K.concatenate([UpSampling2D()(conv7), conv2], axis=-1)
     conv8 = conv_block_simple(up8, 192, "conv8_1")
     conv8 = conv_block_simple(conv8, 128, "conv8_2")
 
+    make_stage_output(conv8)
+
     up9 = K.concatenate([UpSampling2D()(conv8), conv1], axis=-1)
     conv9 = conv_block_simple(up9, 96, "conv9_1")
     conv9 = conv_block_simple(conv9, 64, "conv9_2")
+
+    make_stage_output(conv9)
 
     up10 = K.concatenate([UpSampling2D()(conv9), base_model.input], axis=-1)
     conv10 = conv_block_simple(up10, 48, "conv10_1")
@@ -104,7 +128,13 @@ def unet_mobilenet(input_shape=(256, 256, 3), num_classes=3, encoder_weights='im
     conv10 = SpatialDropout2D(0.2)(conv10)
 
     x = Conv2D(num_classes, (1, 1), activation=None, name="prediction")(conv10)
-    model = Model(base_model.input, x)
+    if multiscale:
+        outputs.append(x)
+
+    if multiscale:
+        model = Model(base_model.input, outputs)
+    else:
+        model = Model(base_model.input, x)
     return model
 
 
@@ -152,15 +182,18 @@ if __name__ == "__main__":
     # model.summary()
     # (960, 480)
 
-    model = unet_inception_resnet_v2((480, 960, 3), num_classes=8)
+    # model = unet_inception_resnet_v2((480, 960, 3), num_classes=8)
+    # K.clear_session()
+
+    # model = unet_resnet((480, 960, 3), num_classes=8)
+    # K.clear_session()
+
+    model = unet_mobilenet((480, 960, 3), num_classes=8, multistage=True)
     K.clear_session()
 
-    model = unet_resnet((480, 960, 3), num_classes=8)
-    K.clear_session()
+    for o in model.outputs:
+        print(o.name, o.shape)
 
-    model = unet_mobilenet((480, 960, 3), num_classes=8)
-    K.clear_session()
-
-    for layer in model.layers:
-        print(layer.name, layer.output.shape)
+    # for layer in model.layers:
+        # print(layer.name, layer.output.shape)
     # model.summary()

@@ -16,6 +16,7 @@ from . import cub
 from . import bioimage
 from . import drawing
 from . import custom
+from . import supervisely
 from .directory import DirectoryDataset
 from .utils import DataType, get_split, get_split_from_list, download_records, google_drive_records_by_tag
 from .tfrecord import TFReader, TFWriter
@@ -48,7 +49,9 @@ datasets_by_name = {
     'cub2002011category': cub.CUB2002011Category,
     'bioimagebenchmark': bioimage.BioimageBenchmark,
     "apdrawing": drawing.APDrawing,
-    "custom_semseg": custom.SemSeg
+    "custom_semseg": custom.SemSeg,
+    "supervisely_person": supervisely.SuperviselyPerson,
+    "supervisely_person_sample": supervisely.SuperviselyPersonSample,
 }
 
 

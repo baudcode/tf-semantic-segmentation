@@ -30,7 +30,7 @@ class SuperviselyPerson(Dataset):
         super(SuperviselyPerson, self).__init__(cache_dir)
         self.url = self.SAMPLE_DATA_URL if sample else self.DATA_URL
         logger.info(f"using url {self.url}")
-        self.extracted = download_and_extract(self.url, self.cache_dir, file_name='sample.tar')
+        self.extracted = download_and_extract(self.url, self.cache_dir, file_name='super_sample.tar' if sample else "super_full.tar")
         self.generated = self.generate_masks()
 
     @property
@@ -44,7 +44,7 @@ class SuperviselyPerson(Dataset):
         for img_name in os.listdir(img_folder):
             img_path = os.path.join(img_folder, img_name)
             ann_path = os.path.join(ann_folder, img_name + ".json")
-            
+
             # create a mask
             mask_path = os.path.join(ann_folder, img_name + ".mask.png")
             if os.path.exists(mask_path):
@@ -57,7 +57,7 @@ class SuperviselyPerson(Dataset):
 
             json_data = json.load(open(ann_path, 'r'))
             img_size = (json_data['size']['width'], json_data['size']['height'])
-            
+
             mask = np.zeros(img_size[::-1], np.uint8)
 
             for obj in json_data['objects']:
@@ -68,7 +68,6 @@ class SuperviselyPerson(Dataset):
                     origin = obj['bitmap']['origin']
                     x, y = origin
                     mask[y:(y + bitmap_mask.shape[0]), x:(x + bitmap_mask.shape[1])] = bitmap_mask
-                    
 
                 elif geo_type == "polygon":
                     points = obj['points']['exterior']
@@ -77,7 +76,7 @@ class SuperviselyPerson(Dataset):
                 else:
                     logger.error(f"skipping geo type {geo_type}")
                     continue
-            
+
             Image.fromarray(mask, "L").save(mask_path)
 
             yield img_path, mask_path
@@ -107,9 +106,15 @@ class SuperviselyPerson(Dataset):
             DataType.VAL: val,
             DataType.TEST: test
         }
-        
+
     def raw(self):
         return self.generated
+
+
+class SuperviselyPersonSample(SuperviselyPerson):
+    def __init__(self, cache_dir):
+        super().__init__(cache_dir, True)
+
 
 if __name__ == "__main__":
     from .utils import test_dataset

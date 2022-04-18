@@ -1,4 +1,3 @@
-from os.path import basename
 from tf_semantic_segmentation.models import get_model_by_name, models_by_name
 from tf_semantic_segmentation.datasets import get_dataset_by_name, DataType, datasets_by_name, get_cache_dir, google_drive_records_by_tag, \
     download_records, DirectoryDataset, TFWriter, TFReader
@@ -566,12 +565,12 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("applying augmentations %s" % str(args.augmentations))
         augment_fn = preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
 
-    train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn, shuffle=True)
+    train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
 
     # val preprocessing
     val_preprocess_fn = preprocessing_ds.get_preprocess_fn_v2(args.size, num_classes, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size, shuffle=False)
+    val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
 
     logger.info("visualizations: %s" % str(args.visualizations))
 

@@ -1,3 +1,6 @@
+from typing import List, Tuple
+
+from tf_semantic_segmentation.datasets.utils import Color
 from . import ColorMode
 from .. import utils
 
@@ -52,6 +55,7 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
             image = tf.image.rgb_to_grayscale(image)
     else:
         raise Exception("unknown mode %s" % mode)
+
     if size is not None:
         # make 3dim for tf.image.resize
         if mask is not None:
@@ -84,6 +88,94 @@ def resize_and_change_color(image, mask, size, color_mode, resize_method='resize
             mask = tf.squeeze(mask, axis=-1)
 
     return image, mask
+
+
+def resize(image, mask, size, resize_method):
+    # make 3dim for tf.image.resize
+    if mask is not None:
+        mask = tf.expand_dims(mask, axis=-1)
+
+    # augmentatations
+    if resize_method == 'resize':
+        image = tf.image.resize(image, size, antialias=True)
+        if mask is not None:
+            mask = tf.image.resize(mask, size, method='nearest')  # use nearest for no interpolation
+
+    elif resize_method == 'resize_with_pad':
+        image = tf.image.resize_with_pad(image, size[0], size[1], antialias=True)
+        if mask is not None:
+            mask = tf.image.resize_with_pad(mask, size[0], size[1], method='nearest')  # use nearest for no interpolation
+
+    elif resize_method == 'resize_with_crop_or_pad':
+        image = tf.image.resize_with_crop_or_pad(image, size[0], size[1])
+        if mask is not None:
+            mask = tf.image.resize_with_crop_or_pad(mask, size[0], size[1])  # use nearest for no interpolation
+
+    elif resize_method == 'patch':
+        image, mask = select_patch(image, mask, size, None)
+
+    else:
+        raise Exception("unknown resize method %s" % resize_method)
+
+    # reduce dim added before
+    if mask is not None:
+        mask = tf.squeeze(mask, axis=-1)
+
+    return image, mask
+
+
+@tf.function
+def process_mask_v2(mask, scale_mask: bool, num_classes: int):
+    if scale_mask:
+        mask = tf.cast(mask, tf.float32)
+        mask = mask / (float(num_classes) - 1.0)
+    else:
+        mask = tf.cast(mask, tf.int64)
+        mask = tf.one_hot(mask, int(num_classes))
+    return mask
+
+
+def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
+                         scale_mask: bool = False,
+                         multiscale: List[Tuple[int, int]] = []):
+
+    @tf.function
+    def map_fn(image, mask):
+
+        # resize method for image create float32 image anyway
+        # image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
+        image, mask = resize(image, mask, size, resize_method)
+        mask = process_mask_v2(mask, scale_mask, num_classes)
+
+        if len(multiscale) > 0:
+            print("apply multiscaling to output masks")
+
+            outputs = {}
+            for i, multi_scale_size in enumerate(multiscale):
+                size_format = "x".join(map(str, multi_scale_size))
+                print(f"target size[{i}]: {multi_scale_size}")
+
+                if num_classes == 1:
+                    mask_input = tf.expand_dims(mask, axis=-1)
+                else:
+                    mask_input = tf.identity(mask)
+
+                scaled_output = tf.image.resize(mask_input, multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+                if num_classes == 1:
+                    scaled_output = tf.squeeze(scaled_output, axis=-1)
+
+                if tuple(multi_scale_size) != tuple(size):
+                    outputs[f'predictions_{size_format}'] = scaled_output
+                else:
+                    outputs[f'predictions'] = scaled_output
+
+            return image, outputs
+        else:
+
+            return image, mask
+
+    return map_fn
 
 
 def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, multiscale=[], mode='graph'):
@@ -146,6 +238,9 @@ def select_patch(image, mask, patch_size, color_mode):
         Tuple[tf.Tensor, tf.Tensor]: Tuple of tensors (image, mask) with shape (patch_size[0], patch_size[1], 3)
     """
     image = tf.image.convert_image_dtype(image, tf.uint8)
+    if color_mode == None:
+        color_mode = ColorMode.RGB if image.shape[2] == 3 else ColorMode.GRAY
+
     if color_mode == ColorMode.RGB:
         # use alpha channel for mask
         concat = tf.concat([image, mask], axis=-1)
@@ -185,6 +280,10 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
     if num_workers > 1 and utils.tf_version_gt_eq('2.4'):
         options = tf.data.Options()
         options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
+        dataset = dataset.with_options(options)
+    else:
+        options = tf.data.Options()
+        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
         dataset = dataset.with_options(options)
 
     dataset = dataset.batch(batch_size)

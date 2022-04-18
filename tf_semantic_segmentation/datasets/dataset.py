@@ -1,3 +1,8 @@
+from typing import Dict, Iterable, List, Tuple
+from warnings import warn
+
+from tf_semantic_segmentation.datasets.utils import load_image
+from tf_semantic_segmentation.processing import ColorMode
 from ..settings import logger
 from ..visualizations import show, masks
 
@@ -6,6 +11,7 @@ import random
 import math
 import numpy as np
 from tensorflow.keras.utils import Sequence
+import tensorflow as tf
 
 
 class DataType:
@@ -38,7 +44,7 @@ class Dataset(object):
     def num_classes(self):
         return len(self.labels)
 
-    def raw(self):
+    def raw(self) -> Dict[str, List[Tuple[str, str]]]:
         return {
             DataType.TRAIN: [],
             DataType.VAL: [],
@@ -93,7 +99,47 @@ class Dataset(object):
 
         imageio.imwrite(mask_path, mask)
 
+    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, randomize=False) -> tf.data.Dataset:
+        """ 
+        Dataset().raw() as to return a dict for data_type to X
+        X is a list of tuple [image_path, mask_path, optional: difficulty]
+
+        Loads images and masks from image and mask paths.
+        """
+        data = self.raw()[data_type]
+
+        if randomize:
+            random.shuffle(data)
+
+        image_paths = [d[0] for d in data]
+        mask_paths = [d[1] for d in data]
+        if len(data[0]) == 3:
+            difficulty = [d[2] for d in data]
+        else:
+            difficulty = None
+
+        assert(len(image_paths) == len(mask_paths)), "len of images does not equal len of masks"
+
+        images_ds = tf.data.Dataset.from_tensor_slices(image_paths)
+        masks_ds = tf.data.Dataset.from_tensor_slices(mask_paths)
+
+        channels = 3 if color_mode == ColorMode.RGB else 1
+        images_ds = images_ds.map(lambda x: load_image(x, tf.float32, squeeze=False, channels=channels),
+                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+        masks_ds = masks_ds.map(lambda x: load_image(x, tf.int64, squeeze=True, channels=1),
+                                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+        if difficulty is None:
+            dataset = tf.data.Dataset.zip((images_ds, masks_ds))
+        else:
+            difficulty_ds = tf.data.Dataset.from_tensor_slices(difficulty)
+            dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
+
+        return dataset
+
     def get(self, data_type=DataType.TRAIN):
+        warn('using get() is deprecated. Use tfdataset instead.', DeprecationWarning, stacklevel=2)
         data = self.raw()[data_type]
 
         def gen():

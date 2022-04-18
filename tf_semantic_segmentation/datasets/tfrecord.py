@@ -43,7 +43,7 @@ def serialize_example(image, mask, image_shape, num_classes):
 
 
 @tf.function
-def read_tfrecord(serialized_example):
+def read_tfrecord(serialized_example, include_classes: bool = True):
     feature_description = {
         'image': tf.io.FixedLenFeature((), tf.string),  # tf.float32, image between 0 and 1
         'mask': tf.io.FixedLenFeature((), tf.string),
@@ -63,7 +63,10 @@ def read_tfrecord(serialized_example):
     mask_shape = [example['height'], example['width']]
     mask = tf.reshape(mask, mask_shape)
 
-    return image, mask, example['num_classes']
+    if include_classes:
+        return image, mask, example['num_classes']
+    else:
+        return image, mask
 
 
 class TFReader:
@@ -72,14 +75,14 @@ class TFReader:
         self.record_dir = record_dir
         self.options = options
 
-    def get_dataset(self, data_type):
+    def get_dataset(self, data_type, include_classes: bool = True):
         """ Returns the read dataset"""
 
         record_dir = os.path.join(self.record_dir, data_type)
         files = get_files(record_dir, extensions=['tfrecord'])
         logger.debug("TFReader found these (%d) files: %s" % (len(files), str(files)))
         tfrecord_dataset = tf.data.TFRecordDataset(files, compression_type=self.options, num_parallel_reads=multiprocessing.cpu_count())
-        return tfrecord_dataset.map(read_tfrecord, num_parallel_calls=multiprocessing.cpu_count())
+        return tfrecord_dataset.map(lambda example: read_tfrecord(example, include_classes), num_parallel_calls=multiprocessing.cpu_count())
 
     def num_examples(self, data_type):
         return sum([1 for _ in self.get_dataset(data_type)])

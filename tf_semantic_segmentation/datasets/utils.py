@@ -61,6 +61,18 @@ def get_split_from_dirs(images_dir, masks_dir, extensions=['png'], train_split=0
     return get_split(trainset, train_split=train_split, val_split=val_split, shuffle=shuffle, rand=rand)
 
 
+@tf.function
+def load_image(image_path: str, dtype: tf.dtypes.DType, squeeze: bool = True, channels: int = -1):
+    image_string = tf.io.read_file(image_path)
+    image = tf.image.decode_image(image_string, channels=channels if channels != -1 else None, expand_animations=False)
+    image = tf.image.convert_image_dtype(image, dtype)
+
+    if squeeze and channels == 1:
+        image = tf.squeeze(image, axis=-1)
+
+    return image
+
+
 def convert2tfdataset(dataset, data_type, randomize=True):
     """
     Converts a tf_semantic_segmentation.datasets.dataset.Dataset class to tf.data.Dataset which returns a tuple
@@ -118,21 +130,6 @@ def convert2tfdataset(dataset, data_type, randomize=True):
     #ds[0] = tf.reshape(ds[0], ds[2])
     #ds[1] = tf.reshape(ds[1], [ds[2][0], ds[2][1], tf.convert_to_tensor(dataset.num_classes, tf.int64)])
     return ds
-
-
-def load_image(image_path, dtype, squeeze=True, channels=3):
-    image_string = tf.io.read_file(image_path)
-    image = tf.cond(
-        tf.image.is_jpeg(image_string),
-        lambda: tf.image.decode_jpeg(image_string, channels=channels),
-        lambda: tf.image.decode_png(image_string, channels=channels))
-
-    image = tf.image.convert_image_dtype(image, dtype)
-
-    if squeeze and channels == 1:
-        image = tf.squeeze(image, axis=-1)
-
-    return image
 
 
 def download_records(tag, destination_dir):

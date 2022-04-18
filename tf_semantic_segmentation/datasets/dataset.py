@@ -103,7 +103,7 @@ class Dataset(object):
 
         imageio.imwrite(mask_path, mask)
 
-    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, randomize=False) -> tf.data.Dataset:
+    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, shuffle=False) -> tf.data.Dataset:
         """ 
         Dataset().raw() as to return a dict for data_type to X
         X is a list of tuple [image_path, mask_path, optional: difficulty]
@@ -125,11 +125,15 @@ class Dataset(object):
         masks_ds = tf.data.Dataset.from_tensor_slices(mask_paths)
 
         channels = 3 if color_mode == ColorMode.RGB else 1
-        images_ds = images_ds.map(lambda x: load_image(x, tf.float32, squeeze=False, channels=channels),
-                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-        masks_ds = masks_ds.map(lambda x: load_image(x, tf.int64, squeeze=True, channels=1),
-                                num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        @tf.function
+        def load(image_path: str, mask_path: str, difficulty: int = None):
+            image = load_image(image_path, tf.float32, squeeze=False, channels=channels)
+            mask = load_image(mask_path, tf.int64, squeeze=True, channels=1)
+            if difficulty != None:
+                return image, mask, difficulty
+            else:
+                return image, mask
 
         if difficulty is None:
             dataset = tf.data.Dataset.zip((images_ds, masks_ds))
@@ -137,8 +141,11 @@ class Dataset(object):
             difficulty_ds = tf.data.Dataset.from_tensor_slices(difficulty)
             dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
 
-        if randomize:
-            dataset = dataset.shuffle()
+        if shuffle:
+            dataset = dataset.shuffle(buffer_size=len(data))
+
+        # load images
+        dataset = dataset.map(load, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
         return dataset
 

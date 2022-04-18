@@ -48,7 +48,7 @@ class TestDataset(Dataset):
 
 
 @pytest.fixture()
-def dataset(request):
+def dataset(request) -> TestDataset:
     cache_dir = os.path.join(tempfile.tempdir, 'testds')  # tempfile.mkdtemp()
     os.makedirs(cache_dir, exist_ok=True)
     ds = TestDataset(cache_dir, num=100, size=(64, 64))
@@ -57,7 +57,7 @@ def dataset(request):
 
 
 @pytest.fixture()
-def tfrecord_reader():
+def tfrecord_reader() -> TFReader:
     cache_dir = os.path.join(tempfile.tempdir, 'testds')  # tempfile.mkdtemp()
     record_dir = os.path.join(cache_dir, 'records')
 
@@ -71,6 +71,6 @@ def tfrecord_reader():
 
 
 @pytest.fixture()
-def shapes_ds():
+def shapes_ds() -> ShapesDS:
     """ Returns the dataset fixture """
     return ShapesDS(os.path.join(tempfile.tempdir, 'SHAPES'), num_examples=100)

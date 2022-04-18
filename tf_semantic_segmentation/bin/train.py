@@ -124,7 +124,7 @@ def get_args(args=None):
     parser.add_argument('-o', '--optimizer', default='adam', choices=optimizer_choices, help='optimizer')
     parser.add_argument('-bs', '--batch_size', default=1, type=int, help='batch size')
     parser.add_argument('-l', '--loss', default='categorical_crossentropy', type=str, choices=list(losses_by_name.keys()), help='loss')
-    parser.add_argument('-lm', '--metrics', default=['iou_score', 'f1_score', 'categorical_accuracy'],
+    parser.add_argument('-lm', '--metrics', default=['iou_score', 'f1_score'],
                         type=any_of(metrics_by_name.keys()),
                         help='metrics, choices: %s' % (list(metrics_by_name.keys())))
     parser.add_argument('-lr', '--learning_rate', default=1e-4, type=float, help='learning rate')
@@ -239,6 +239,11 @@ def get_args(args=None):
     parser.add_argument('-lr_min_lr', '--reduce_lr_min_lr', default=1e-7, type=float, help='minimum learning rate when using reduce_lr_on_plateau')
     parser.add_argument('-lr_min_delta', '--reduce_lr_min_delta', default=0.0001, type=float, help='reduce lr min delta')
     parser.add_argument('-lr_monitor', '--reduce_lr_monitor', default='val_loss', type=str, help='reduce lr monitor')
+
+    # cos decay
+    parser.add_argument("--cos_decay", action='store_true', help='if specified enables the cosinus learning rate decay')
+    parser.add_argument("-cos_steps", '--cos_decay_steps', default=10, type=int, help='number of steps to decay over')
+    parser.add_argument("-cos_alpha", '--cos_decay_alpha', default=0.0, type=float, help='alpha for cos decay')
 
     # mlflow
     parser.add_argument('-flow', '--mlflow', action='store_true', help='enable mlflow auto logging')
@@ -512,8 +517,27 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("metrics: %s" % str(metrics))
         logger.info("loss: %s" % str(loss))
 
-        opt = get_optimizer_by_name(args.optimizer, args.learning_rate)
-        model.compile(optimizer=opt, loss=loss, metrics=metrics)  # metrics=losses
+        lr = args.learning_rate
+        if args.cos_decay:
+            logger.info(f"using cosinus learning rate decay: steps={args.cos_decay_steps}, alpha={args.cos_decay_alpha}, initial_lr={args.learning_rate}")
+            lr = tf.keras.optimizers.schedules.CosineDecay(lr, args.cos_decay_steps, args.cos_decay_alpha)
+        else:
+            logger.info(f"using constant learning rate for optimizer {args.optimizer}: {lr}")
+
+        opt = get_optimizer_by_name(args.optimizer, lr)
+
+        if len(model.outputs) == 1:
+            loss_weights = None
+        else:
+            if len(set(["%s" % ("x".join(map(str, o.shape[1:]))) for o in model.outputs])) == 1:
+                logger.info("only 1 output shape in multi output model. not using any loss weights")
+                loss_weights = None
+            else:
+                loss_weights = None if len(model.outputs) == 1 else [0.1 * pow(2, i) for i in range(len(model.outputs))]
+
+        logger.info(f"using loss weights {loss_weights}")
+
+        model.compile(optimizer=opt, loss=loss, metrics=metrics, loss_weights=loss_weights)  # metrics=losses
 
     if args.summary:
         model.summary()

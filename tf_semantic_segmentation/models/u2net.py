@@ -3,11 +3,12 @@ from tensorflow.keras import layers, regularizers
 from tensorflow.keras.models import Model
 
 
-def conv(x, filters=3, dirate=1, kernel_size=3, l2=None):
+def conv(x, filters=3, dirate=1, kernel_size=3, l2=None, name=None):
     return layers.Conv2D(filters, kernel_size=kernel_size,
                          kernel_regularizer=regularizers.l2(l2) if l2 else None,
                          activation=None,
                          dilation_rate=dirate,
+                         name=name,
                          padding='same')(x)
 
 
@@ -17,11 +18,11 @@ def rebnconv(x, filters=3, dirate=1, l2=None):
     return layers.Activation("relu")(y)
 
 
-def upsample(x, factor=2):
+def upsample(x, factor=2, name=None):
     # size=tar.shape[2:]
     if factor == 1:
         return x
-    return layers.UpSampling2D(size=(factor, factor), interpolation='bilinear')(x)
+    return layers.UpSampling2D(size=(factor, factor), interpolation='bilinear', name=name)(x)
 
 
 def pool(x):
@@ -100,7 +101,7 @@ def u2net_builder(encoder, decoder, input_shape=(256, 256, 3), num_classes=2):
 
     y = resu_builder(y, decoder[0][0], decoder[0][1], decoder[0][2])
 
-    decoder_layers = []
+    decoder_layers = [y]
 
     for i, (name, midf, outf) in enumerate(decoder):
         print("decoder", y.shape, name, midf, outf)
@@ -111,15 +112,50 @@ def u2net_builder(encoder, decoder, input_shape=(256, 256, 3), num_classes=2):
     side_layers = []
     for i, dout in enumerate(reversed(decoder_layers)):
         s = conv(dout, num_classes, dirate=1)
-        side = upsample(s, pow(2, i))
-        print("side: ", i, s.shape, "->", side.shape)
+        image_size = s.shape[1:3][::-1]
+        image_size = "x".join(map(str, image_size))
+        if s.shape[1:3] == x.shape[1:3]:
+            # only rename, because no need for upsampling
+            s._name = f'predictions_{image_size}'
+            side = s
+        else:
+            side = upsample(s, pow(2, i), name=f'predictions_{image_size}')
+
+        print("side: ", i, s.shape, "->", side.shape, "|", side.name)
         side_layers.append(side)
 
-    out = conv(tf.concat(side_layers, axis=-1), num_classes, kernel_size=1)
-    return Model(outputs=out, inputs=x)
+    out = conv(tf.concat(side_layers, axis=-1), num_classes, kernel_size=1, name="predictions")
+    
+    # from low to high res
+    outputs = list(reversed(side_layers))
+    outputs.append(out)
+
+    assert(len(outputs) == 7)
+
+    return Model(outputs=outputs, inputs=x)
 
 
 def u2net(input_shape=(256, 256, 3), num_classes=2):
+    encoder = [
+        ["resu7", 32, 64],
+        ["resu6", 32, 128],
+        ["resu5", 64, 256],
+        ["resu4", 128, 512],
+        ["resu4f", 256, 512],
+    ]
+
+    decoder = [
+        ["resu4f", 256, 512],
+        ["resu4", 128, 256],
+        ["resu5", 64, 128],
+        ["resu6", 32, 64],
+        ["resu7", 16, 64],
+    ]
+
+    return u2net_builder(encoder, decoder, input_shape, num_classes)
+
+
+def u2net_v2(input_shape=(256, 256, 3), num_classes=2):
     encoder = [
         ["resu7", 32, 64],
         ["resu6", 64, 128],
@@ -137,6 +173,7 @@ def u2net(input_shape=(256, 256, 3), num_classes=2):
     ]
 
     return u2net_builder(encoder, decoder, input_shape, num_classes)
+
 
 
 def u2netp(input_shape=(256, 256, 3), num_classes=2):
@@ -162,7 +199,14 @@ def u2netp(input_shape=(256, 256, 3), num_classes=2):
 
 if __name__ == "__main__":
     model = u2net()
-    model.summary()
+    # model.summary()
 
-    model = u2netp()
-    model.summary()
+    print(model.inputs, [o.name for o in model.outputs])
+    import numpy as np
+
+    model.compile(optimizer='adam', loss='mse')
+    image = np.zeros((1, 256, 256, 3), np.float32)
+    p = model.predict(image)
+
+    # model = u2netp()
+    # model.summary()

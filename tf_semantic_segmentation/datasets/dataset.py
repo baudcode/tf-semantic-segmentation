@@ -6,7 +6,11 @@ from tf_semantic_segmentation.processing import ColorMode
 from ..settings import logger
 from ..visualizations import show, masks
 
-import imageio
+try:
+    import imageio.v2 as imageio
+except:
+    import imageio
+
 import random
 import math
 import numpy as np
@@ -108,9 +112,6 @@ class Dataset(object):
         """
         data = self.raw()[data_type]
 
-        if randomize:
-            random.shuffle(data)
-
         image_paths = [d[0] for d in data]
         mask_paths = [d[1] for d in data]
         if len(data[0]) == 3:
@@ -135,6 +136,9 @@ class Dataset(object):
         else:
             difficulty_ds = tf.data.Dataset.from_tensor_slices(difficulty)
             dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
+
+        if randomize:
+            dataset = dataset.shuffle()
 
         return dataset
 

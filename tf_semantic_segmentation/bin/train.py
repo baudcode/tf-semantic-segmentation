@@ -2,7 +2,6 @@ from os.path import basename
 from tf_semantic_segmentation.models import get_model_by_name, models_by_name
 from tf_semantic_segmentation.datasets import get_dataset_by_name, DataType, datasets_by_name, get_cache_dir, google_drive_records_by_tag, \
     download_records, DirectoryDataset, TFWriter, TFReader
-from tf_semantic_segmentation.datasets.utils import convert2tfdataset
 from tf_semantic_segmentation.losses import get_loss_by_name, losses_by_name
 from tf_semantic_segmentation.metrics import metrics_by_name, get_metric_by_name, iou_score
 from tf_semantic_segmentation.processing import dataset as preprocessing_ds
@@ -545,19 +544,20 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.train_on_generator:
         if ds is None:
             raise Exception("Dataset cannot be None when training with generator")
-        train_ds = convert2tfdataset(ds, DataType.TRAIN)
-        val_ds = convert2tfdataset(ds, DataType.VAL)
+
+        train_ds = ds.tfdataset_v2(DataType.TRAIN, args.color_mode)
+        val_ds = ds.tfdataset_v2(DataType.VAL, args.color_mode)
         reader = None  # no tfrecord reader
     else:
         logger.info("using tfreader to read record dir %s" % record_dir)
         reader = TFReader(record_dir, options=args.record_options)
-        train_ds = reader.get_dataset(DataType.TRAIN)
-        val_ds = reader.get_dataset(DataType.VAL)
+        train_ds = reader.get_dataset(DataType.TRAIN, include_classes=False)
+        val_ds = reader.get_dataset(DataType.VAL, include_classes=False)
 
     logger.info("building input pipeline")
     # train preprocessing
 
-    train_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
+    train_preprocess_fn = preprocessing_ds.get_preprocess_fn_v2(args.size, num_classes, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
     train_ds = train_ds.map(train_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if len(args.augmentations) == 0:
@@ -566,18 +566,18 @@ def train_test_model(args, hparams=None, reporter=None):
         logger.info("applying augmentations %s" % str(args.augmentations))
         augment_fn = preprocessing_ds.get_augment_fn(args.size, global_batch_size, methods=args.augmentations)
 
-    train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn)
+    train_ds = preprocessing_ds.prepare_dataset(train_ds, global_batch_size, buffer_size=args.buffer_size, augment_fn=augment_fn, shuffle=True)
 
     # val preprocessing
-    val_preprocess_fn = preprocessing_ds.get_preprocess_fn(args.size, args.color_mode, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
+    val_preprocess_fn = preprocessing_ds.get_preprocess_fn_v2(args.size, num_classes, args.resize_method, scale_mask=scale_mask, multiscale=multiscale)
     val_ds = val_ds.map(val_preprocess_fn, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size)
+    val_ds = preprocessing_ds.prepare_dataset(val_ds, global_batch_size, buffer_size=args.val_buffer_size, shuffle=False)
 
     logger.info("visualizations: %s" % str(args.visualizations))
 
     # log images to tensorboard
     if (args.tensorboard_train_images and args.tensorboard_train_images_update_batch_freq > 0) or args.save_train_images:
-        train_ds_images = convert2tfdataset(ds, DataType.TRAIN) if args.train_on_generator else reader.get_dataset(DataType.TRAIN)
+        train_ds_images = ds.tfdataset_v2(DataType.TRAIN, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.TRAIN, False)
         train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
         train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=100, shuffle=True, prefetch=False)
         train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
@@ -592,7 +592,7 @@ def train_test_model(args, hparams=None, reporter=None):
         train_prediction_callback.on_batch_end(-1, {})
 
     if args.tensorboard_val_images or args.save_val_images:
-        val_ds_images = convert2tfdataset(ds, DataType.VAL) if args.train_on_generator else reader.get_dataset(DataType.VAL)
+        val_ds_images = ds.tfdataset_v2(DataType.VAL, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.VAL, False)
         val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
         val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
         val_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
@@ -607,7 +607,7 @@ def train_test_model(args, hparams=None, reporter=None):
         val_prediction_callback.on_epoch_end(-1, {})
 
     if args.tensorboard_test_images or args.save_test_images:
-        test_ds_images = convert2tfdataset(ds, DataType.TEST) if args.train_on_generator else reader.get_dataset(DataType.TEST)
+        test_ds_images = ds.tfdataset_v2(DataType.TEST, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.TEST, False)
         test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
         test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
         test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,

@@ -116,15 +116,15 @@ def u2net_builder(encoder, decoder, input_shape=(256, 256, 3), num_classes=2):
         image_size = "x".join(map(str, image_size))
         if s.shape[1:3] == x.shape[1:3]:
             # only rename, because no need for upsampling
-            s._name = f'predictions_{image_size}'
+            s._name = f'conv_{image_size}'
             side = s
         else:
-            side = upsample(s, pow(2, i), name=f'predictions_{image_size}')
+            side = upsample(s, pow(2, i), name=f'conv_{image_size}')
 
         print("side: ", i, s.shape, "->", side.shape, "|", side.name)
         side_layers.append(side)
 
-    out = conv(tf.concat(side_layers, axis=-1), num_classes, kernel_size=1, name="predictions")
+    out = conv(tf.concat(side_layers, axis=-1), num_classes, kernel_size=1, name="prediction")
     
     # from low to high res
     outputs = list(reversed(side_layers))

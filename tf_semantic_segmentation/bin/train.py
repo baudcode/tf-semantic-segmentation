@@ -485,7 +485,7 @@ def train_test_model(args, hparams=None, reporter=None):
             logger.info("restoring model weights from %s" % args.model_weights)
             model.load_weights(args.model_weights)
 
-        multiscale = []
+        multiscale = {}
 
         if len(model.outputs) > 1:
             outputs = []
@@ -497,14 +497,20 @@ def train_test_model(args, hparams=None, reporter=None):
                 except:
                     name = "predictions"
 
-                multiscale.append(o.shape[1:3][::-1])
+                logger.debug(f"using name {name} as output activation")
+                multiscale[name] = o.shape[1:3][::-1]
                 outputs.append(Activation(args.final_activation, dtype='float32', name=name)(o))
 
-            print("model outputs: ", outputs)
+            assert(len(set([o.name for o in outputs])) == len(model.outputs)), "all output names have to be unique. Please rename output layers of the model appropriatly."
+
+            logger.debug("model outputs: {outputs}")
             model = Model(model.input, outputs)
         else:
             model = Model(model.input, Activation(args.final_activation, dtype='float32', name='predictions')(model.output))
             logger.info("output shape: %s" % model.output.shape)
+
+        if len(multiscale.keys()) != 0:
+            logger.info(f"using multiscale for input pipeline: {multiscale}")
 
         logger.info("input shape: %s" % model.input.shape)
 

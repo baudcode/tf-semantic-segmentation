@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
-from tf_semantic_segmentation.datasets.utils import Color
+from tf_semantic_segmentation.datasets.utils import Color, logger
 from . import ColorMode
 from .. import utils
 
@@ -137,7 +137,7 @@ def process_mask_v2(mask, scale_mask: bool, num_classes: int):
 
 def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
                          scale_mask: bool = False,
-                         multiscale: List[Tuple[int, int]] = []):
+                         multiscale: Dict[str, Tuple[int, int]] = {}):
 
     @tf.function
     def map_fn(image, mask):
@@ -147,28 +147,25 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
         image, mask = resize(image, mask, size, resize_method)
         mask = process_mask_v2(mask, scale_mask, num_classes)
 
-        if len(multiscale) > 0:
-            print("apply multiscaling to output masks")
+        if len(list(multiscale.keys())) > 0:
+            logger.info("apply multiscaling to dataset output masks")
 
             outputs = {}
-            for i, multi_scale_size in enumerate(multiscale):
-                size_format = "x".join(map(str, multi_scale_size))
-                print(f"target size[{i}]: {multi_scale_size}")
+
+            for i, (name, multi_scale_size) in enumerate(multiscale.items()):
+                logger.debug(f"[{name}[{i}]: {multi_scale_size}")
+
+                mask_output = tf.identity(mask, name=f"input-{i}")
 
                 if num_classes == 1:
-                    mask_input = tf.expand_dims(mask, axis=-1)
-                else:
-                    mask_input = tf.identity(mask)
+                    mask_output = tf.expand_dims(mask_output, axis=-1)
 
-                scaled_output = tf.image.resize(mask_input, multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                scaled_output = tf.image.resize(mask_output, multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
                 if num_classes == 1:
                     scaled_output = tf.squeeze(scaled_output, axis=-1)
 
-                if tuple(multi_scale_size) != tuple(size):
-                    outputs[f'predictions_{size_format}'] = scaled_output
-                else:
-                    outputs[f'predictions'] = scaled_output
+                outputs[name] = scaled_output
 
             return image, outputs
         else:
@@ -178,7 +175,7 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
     return map_fn
 
 
-def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, multiscale=[], mode='graph'):
+def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, mode='graph'):
 
     @tf.function
     def process_mask(mask, num_classes):
@@ -202,26 +199,7 @@ def get_preprocess_fn(size, color_mode, resize_method, scale_mask=False, multisc
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
         mask = process_mask(mask, num_classes)
 
-        if len(multiscale) > 0:
-            print("apply multiscaling to output masks")
-
-            outputs = {}
-            for i, multi_scale_size in enumerate(multiscale):
-                size_format = "x".join(map(str, multi_scale_size))
-                print(f"target size[{i}]: {multi_scale_size}")
-
-                scaled_output = tf.image.resize(tf.expand_dims(mask, axis=-1), multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-                scaled_output = tf.squeeze(scaled_output, axis=-1)
-
-                if tuple(multi_scale_size) != tuple(size):
-                    outputs[f'predictions_{size_format}'] = scaled_output
-                else:
-                    outputs[f'predictions'] = scaled_output
-
-            return image, outputs
-        else:
-
-            return image, mask
+        return image, mask
 
     return map_fn
 

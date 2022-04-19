@@ -129,7 +129,8 @@ def process_mask_v2(mask, scale_mask: bool, num_classes: int):
     print(f"using mask scaling={scale_mask} num_classes={num_classes}")
     if scale_mask:
         mask = tf.cast(mask, tf.float32)
-        mask = mask / (tf.convert_to_tensor(num_classes, tf.float32) - 1.0)
+        if num_classes > 2:
+            mask = mask / (tf.convert_to_tensor(num_classes, tf.float32) - 1.0)
     else:
         mask = tf.cast(mask, tf.int64)
         mask = tf.one_hot(mask, tf.convert_to_tensor(num_classes, tf.int32))

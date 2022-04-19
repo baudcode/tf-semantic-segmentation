@@ -243,7 +243,7 @@ There are the following addition arguments:
 
 - -s [--size] '$width,$height' (f.e. "512,512")
 - -rm [--resize_method] ('resize', 'resize_with_pad', 'resize_with_crop_or_pad)
-- cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
+- -cm [--color_mode] (0=RGB, 1=GRAY, 2=NONE (default))
 
 
 

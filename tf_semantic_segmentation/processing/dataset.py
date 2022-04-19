@@ -155,7 +155,7 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
             for i, (name, multi_scale_size) in enumerate(multiscale.items()):
                 logger.debug(f"[{name}[{i}]: {multi_scale_size}")
 
-                mask_output = tf.identity(mask, name=f"input-{i}")
+                mask_output = tf.identity(mask, name=f"mutliscale-mask-{i}")
 
                 if num_classes == 1 or scale_mask:
                     mask_output = tf.expand_dims(mask_output, axis=-1)

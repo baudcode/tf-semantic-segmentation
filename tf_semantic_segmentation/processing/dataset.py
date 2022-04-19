@@ -128,10 +128,10 @@ def resize(image, mask, size, resize_method):
 def process_mask_v2(mask, scale_mask: bool, num_classes: int):
     if scale_mask:
         mask = tf.cast(mask, tf.float32)
-        mask = mask / (float(num_classes) - 1.0)
+        mask = mask / (tf.convert_to_tensor(num_classes, tf.float32) - 1.0)
     else:
         mask = tf.cast(mask, tf.int64)
-        mask = tf.one_hot(mask, int(num_classes))
+        mask = tf.one_hot(mask, tf.convert_to_tensor(num_classes, tf.int32))
     return mask
 
 
@@ -157,15 +157,16 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
 
                 mask_output = tf.identity(mask, name=f"input-{i}")
 
-                if num_classes == 1:
+                if num_classes == 1 or scale_mask:
                     mask_output = tf.expand_dims(mask_output, axis=-1)
 
                 scaled_output = tf.image.resize(mask_output, multi_scale_size, antialias=False, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
-                if num_classes == 1:
+                if num_classes == 1 or scale_mask:
                     scaled_output = tf.squeeze(scaled_output, axis=-1)
 
                 outputs[name] = scaled_output
+                print(scaled_output.shape)
 
             return image, outputs
         else:

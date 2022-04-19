@@ -453,7 +453,9 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if args.final_activation == 'sigmoid':
         logger.warning('using only 1 output channel for sigmoid activation function to work')
-        num_classes = 1
+        model_num_classes = 1
+    else:
+        model_num_classes = num_classes
 
     logger.info('strategy: %s' % str(strategy))
 
@@ -467,7 +469,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("creating model %s" % args.model)
     with strategy.scope():
-        model_args = {'input_shape': input_shape, "num_classes": num_classes}
+        model_args = {'input_shape': input_shape, "num_classes": model_num_classes}
         model_args.update(args.model_args)
 
         if isinstance(args.model, str):

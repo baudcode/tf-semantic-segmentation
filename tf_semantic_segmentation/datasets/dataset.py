@@ -103,7 +103,7 @@ class Dataset(object):
 
         imageio.imwrite(mask_path, mask)
 
-    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, shuffle=False) -> tf.data.Dataset:
+    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, shuffle=False, reshuffle_each_iteration=True, buffer_size=-1) -> tf.data.Dataset:
         """ 
         Dataset().raw() as to return a dict for data_type to X
         X is a list of tuple [image_path, mask_path, optional: difficulty]
@@ -142,7 +142,8 @@ class Dataset(object):
             dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
 
         if shuffle:
-            dataset = dataset.shuffle(buffer_size=len(data))
+            buffer_size = buffer_size if buffer_size != -1 else len(data)
+            dataset = dataset.shuffle(buffer_size=buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
 
         # load images
         dataset = dataset.map(load, num_parallel_calls=tf.data.experimental.AUTOTUNE)

@@ -126,6 +126,7 @@ def resize(image, mask, size, resize_method):
 
 @tf.function
 def process_mask_v2(mask, scale_mask: bool, num_classes: int):
+    print(f"using mask scaling={scale_mask} num_classes={num_classes}")
     if scale_mask:
         mask = tf.cast(mask, tf.float32)
         mask = mask / (tf.convert_to_tensor(num_classes, tf.float32) - 1.0)
@@ -235,7 +236,7 @@ def select_patch(image, mask, patch_size, color_mode):
     return (patch_image, patch_mask)
 
 
-def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=True, prefetch=True, augment_fn=None):
+def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip=0, num_workers=1, worker_index=0, cache=False, shuffle=False, prefetch=True, augment_fn=None):
 
     print(locals())
     if num_workers > 1:

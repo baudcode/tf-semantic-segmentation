@@ -74,18 +74,29 @@ class TFReader:
     def __init__(self, record_dir, options='GZIP'):
         self.record_dir = record_dir
         self.options = options
+        self._num_examples = {}  # num examples cache
 
-    def get_dataset(self, data_type, include_classes: bool = True):
+    def get_dataset(self, data_type, include_classes: bool = True, shuffle: bool = False, reshuffle_each_iteration: bool = True, buffer_size: int = -1):
         """ Returns the read dataset"""
 
         record_dir = os.path.join(self.record_dir, data_type)
         files = get_files(record_dir, extensions=['tfrecord'])
         logger.debug("TFReader found these (%d) files: %s" % (len(files), str(files)))
         tfrecord_dataset = tf.data.TFRecordDataset(files, compression_type=self.options, num_parallel_reads=multiprocessing.cpu_count())
+
+        if shuffle:
+            buffer_size = buffer_size if buffer_size != -1 else self.num_examples(data_type)
+            tfrecord_dataset = tfrecord_dataset.shuffle(buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
+
         return tfrecord_dataset.map(lambda example: read_tfrecord(example, include_classes), num_parallel_calls=multiprocessing.cpu_count())
 
-    def num_examples(self, data_type):
-        return sum([1 for _ in self.get_dataset(data_type)])
+    def num_examples(self, data_type) -> int:
+        if data_type in self._num_examples:
+            return self._num_example[data_type]
+
+        examples = sum([1 for _ in self.get_dataset(data_type)])
+        self._num_examples[data_type] = examples
+        return examples
 
     def num_examples_and_mean(self, data_type):
         examples = 0

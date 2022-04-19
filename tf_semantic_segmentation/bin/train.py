@@ -552,13 +552,13 @@ def train_test_model(args, hparams=None, reporter=None):
         if ds is None:
             raise Exception("Dataset cannot be None when training with generator")
 
-        train_ds = ds.tfdataset_v2(DataType.TRAIN, args.color_mode)
+        train_ds = ds.tfdataset_v2(DataType.TRAIN, args.color_mode, shuffle=True)
         val_ds = ds.tfdataset_v2(DataType.VAL, args.color_mode)
         reader = None  # no tfrecord reader
     else:
         logger.info("using tfreader to read record dir %s" % record_dir)
         reader = TFReader(record_dir, options=args.record_options)
-        train_ds = reader.get_dataset(DataType.TRAIN, include_classes=False)
+        train_ds = reader.get_dataset(DataType.TRAIN, include_classes=False, shuffle=True)
         val_ds = reader.get_dataset(DataType.VAL, include_classes=False)
 
     logger.info("building input pipeline")
@@ -584,9 +584,9 @@ def train_test_model(args, hparams=None, reporter=None):
 
     # log images to tensorboard
     if (args.tensorboard_train_images and args.tensorboard_train_images_update_batch_freq > 0) or args.save_train_images:
-        train_ds_images = ds.tfdataset_v2(DataType.TRAIN, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.TRAIN, False)
+        train_ds_images = ds.tfdataset_v2(DataType.TRAIN, args.color_mode, shuffle=True, buffer_size=100) if args.train_on_generator else reader.get_dataset(DataType.TRAIN, False)
         train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-        train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, buffer_size=100, shuffle=True, prefetch=False)
+        train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, prefetch=False)
         train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,
                                                                              scaled_mask=scale_mask,
                                                                              binary_threshold=args.binary_threshold,
@@ -601,7 +601,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.tensorboard_val_images or args.save_val_images:
         val_ds_images = ds.tfdataset_v2(DataType.VAL, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.VAL, False)
         val_ds_images = val_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-        val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+        val_ds_images = preprocessing_ds.prepare_dataset(val_ds_images, args.num_tensorboard_images, buffer_size=1, prefetch=False, take=args.num_tensorboard_images)
         val_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'validation'), val_ds_images,
                                                                            scaled_mask=scale_mask,
                                                                            binary_threshold=args.binary_threshold,
@@ -616,7 +616,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if args.tensorboard_test_images or args.save_test_images:
         test_ds_images = ds.tfdataset_v2(DataType.TEST, args.color_mode) if args.train_on_generator else reader.get_dataset(DataType.TEST, False)
         test_ds_images = test_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
-        test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, shuffle=False, prefetch=False, take=args.num_tensorboard_images)
+        test_ds_images = preprocessing_ds.prepare_dataset(test_ds_images, args.num_tensorboard_images, buffer_size=1, prefetch=False, take=args.num_tensorboard_images)
         test_prediction_callback = custom_callbacks.EpochPredictionCallback(model, os.path.join(args.logdir, 'test'), test_ds_images,
                                                                             scaled_mask=scale_mask,
                                                                             save_images=args.save_test_images,

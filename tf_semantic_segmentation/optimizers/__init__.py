@@ -14,6 +14,14 @@ def get_optimizer_by_name(name, lr) -> optimizers.Optimizer:
         radam = tfa.optimizers.RectifiedAdam(learning_rate=lr)
         ranger = tfa.optimizers.Lookahead(radam, sync_period=6, slow_step_size=0.5)
         return ranger
+
+    elif name == 'madgrad':
+        from madgrad import MadGrad
+        return MadGrad(lr=lr)
+    elif name == 'novograd':
+        import tensorflow_addons as tfa
+        return tfa.optimizers.NovoGrad(lr=lr)
+
     else:
         raise Exception("unknown optimizer %s" % name)
 

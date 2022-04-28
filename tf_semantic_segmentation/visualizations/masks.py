@@ -5,6 +5,16 @@ import random
 import cv2
 
 
+def get_colors_cmap(N, shuffle=False):
+    import matplotlib.pyplot as plt
+    color_map = plt.cm.get_cmap('hsv', N)
+    colors = [tuple([int(c * 255) for c in color_map(i)[:3]]) for i in range(N)]
+    if shuffle:
+        random.shuffle(colors)
+
+    return colors
+
+
 def get_colors(N, shuffle=False, bright=True):
     """
     https://github.com/pedropro/TACO/blob/master/detector/visualize.py
@@ -53,8 +63,13 @@ def apply_mask_v2(image, mask, color, alpha=0.5):
 def overlay_classes(image, target, colors, num_classes, alpha=0.5):
     assert(len(colors) == (num_classes - 1))
     for k in range(1, num_classes):
+        print(f"applying color {colors[k - 1]} on class={k}")
         mask = np.where(target == k, 1, 0)
-        image = apply_mask_v2(image, mask, colors[k - 1], alpha=alpha)
+        print((mask == 1).astype(np.uint8).sum())
+        print(image.shape, image.dtype, image.max(), image.min())
+        print(mask.shape, mask.dtype, mask.max(), mask.min())
+
+        image = apply_mask(image, mask, colors[k - 1], alpha=alpha)
     return image
 
 
@@ -70,7 +85,7 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
     """
 
     predictions = predictions.copy()
-    colors = get_colors(num_classes)[1:]
+    colors = get_colors_cmap(num_classes - 1)
 
     if images is None:
         if isinstance(predictions, list):
@@ -88,6 +103,7 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
             images = [cv2.cvtColor(i.copy(), cv2.COLOR_GRAY2RGB) for i in images]
             images = np.asarray(images)
 
+    # always assume the predictions have multiple resolutions
     if not isinstance(predictions, list):
         predictions = [predictions]
 
@@ -101,6 +117,8 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
         if p.shape[-1] == 1:
             # remove channel dimension
             p = np.squeeze(p, axis=-1)
+
+        shape = p.shape[1:3][::-1]
 
         if len(p.shape) == 3:
             # set either zero or one
@@ -119,7 +137,6 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
             o = overlay_classes(image_resized, p[i], colors, num_classes, alpha=alpha)
             overlays.append(o)
 
-        shape = p.shape[:2][::-1]
         shape = "x".join(map(str, shape))
         outputs[shape] = overlays
 

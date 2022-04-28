@@ -24,6 +24,7 @@ from .settings import logger
 class ExtractException(Exception):
     pass
 
+
 def tf_version_gt_eq(version):
     # checks if the tensorflow version is greater or equal to `version`
     for r_part, part in zip(map(int, version.split(".")), map(int, tf.__version__.split("."))):
@@ -378,22 +379,16 @@ def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False,
     return destination_dir
 
 
-def get_now_timestamp(mode="postgis"):
-    now = datetime.now()
-    return format_datetime(now, mode=mode)
+def get_now_timestamp():
+    return format_datetime(datetime.now())
 
 
 def get_now_datetime():
     return datetime.now().replace(tzinfo=pytz.utc)
 
 
-def format_datetime(d, mode="postgis"):
-    if mode == 'postgis':
-        return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
-    elif mode == 'filename':
-        return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")
-    else:
-        return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d %H:%M:%S")
+def format_datetime(d: datetime):
+    return d.replace(tzinfo=pytz.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
 
 def ndarray_to_base64(img):
@@ -414,11 +409,13 @@ def get_size(path='.'):
 
     return total_size
 
+
 def get_gpu_stats():
-    cmd = ["nvidia-smi", 
-        "--query-gpu=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used",
-        "--format=csv"]
-    headers = "timestamp name pci.bus_id driver_version pstate pcie.link.gen.max pcie.link.gen.current temperature.gpu utilization.gpu utilization.memory memory.total memory.free memory.used".split(" ")
+    cmd = ["nvidia-smi",
+           "--query-gpu=timestamp,name,pci.bus_id,driver_version,pstate,pcie.link.gen.max,pcie.link.gen.current,temperature.gpu,utilization.gpu,utilization.memory,memory.total,memory.free,memory.used",
+           "--format=csv"]
+    headers = "timestamp name pci.bus_id driver_version pstate pcie.link.gen.max pcie.link.gen.current temperature.gpu utilization.gpu utilization.memory memory.total memory.free memory.used".split(
+        " ")
     outputs = str(subprocess.check_output(cmd), 'utf-8')
     values = outputs.split("\n")[-2].split(",")
     values = list(map(lambda x: x.strip(), values))

@@ -1,3 +1,4 @@
+
 from .dataset import Dataset, DataType
 from ..utils import get_files
 from .utils import get_split, load_image
@@ -9,6 +10,8 @@ import random
 
 
 class DirectoryDataset(Dataset):
+
+    supports_v2 = True
 
     def __init__(self, directory, rand=0.2, extensions=['png', 'jpg', 'jpeg']):
         super(DirectoryDataset, self).__init__(directory)
@@ -26,6 +29,7 @@ class DirectoryDataset(Dataset):
         if len(self._labels) < 2:
             raise AttributeError("Please provide more than 1 label, only found %s in file %s" % (str(self._labels), labels_path))
 
+        logger.info("reading images and masks")
         masks_dir = os.path.join(directory, 'masks')
         images_dir = os.path.join(directory, 'images')
 
@@ -73,7 +77,8 @@ class DirectoryDataset(Dataset):
         return self.split
 
     def tfdataset(self, data_type=DataType.TRAIN, randomize=False):
-
+        from warnings import warn
+        warn('tfdataset is deprecated. use tfdataset_v2', DeprecationWarning, stacklevel=2)
         data = self.raw()[data_type]
 
         if randomize:

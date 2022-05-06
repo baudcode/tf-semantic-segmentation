@@ -92,14 +92,11 @@ class DirectoryDataset(Dataset):
             lambda path: load_image(path, tf.uint8, squeeze=True, channels=1),
             num_parallel_calls=tf.data.experimental.AUTOTUNE,
         )
-        nc = self.num_classes
-        num_classes_ds = tf.data.Dataset.from_tensor_slices([nc for i in range(len(image_paths))])
-
-        dataset = tf.data.Dataset.zip((images_ds, masks_ds, num_classes_ds))
+        dataset = tf.data.Dataset.zip((images_ds, masks_ds))
         return dataset
 
 
-if __name__ == "__main__":
+def main():
     from ..processing import dataset
     from .utils import convert2tfdataset
     from ..visualizations import show
@@ -117,7 +114,11 @@ if __name__ == "__main__":
     tfds = tfds.map(fn)
 
     for i, (image, mask) in enumerate(tfds):
-        show.show_images([image.numpy(), mask.numpy().astype(np.float32)])
+        show.show_images([(image.numpy() * 255).astype(np.uint8), mask.numpy().astype(np.float32)])
         print(image.shape, mask.shape)
         if i == 10:
             break
+
+
+if __name__ == "__main__":
+    main()

@@ -7,6 +7,8 @@ import json
 
 class SemSeg(Dataset):
 
+    supports_v2 = True
+
     def __init__(self, cache_dir):
         super(SemSeg, self).__init__(cache_dir)
         self._parsed = self._parse_dataset_json(os.path.join(cache_dir, 'test', 'dataset.json'))

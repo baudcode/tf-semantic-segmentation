@@ -9,8 +9,8 @@ import time
 
 test_zip_url = "https://www.7-zip.org/a/7za920.zip"
 test_tar_url = "http://deb.debian.org/debian/pool/non-free/u/unrar-nonfree/unrar-nonfree_5.2.7.orig.tar.gz"
-test_rar_url = "https://www.philippwinterberg.com/download/example.rar"
-test_image_url = 'https://homepages.cae.wisc.edu/~ece533/images/airplane.png'
+test_rar_url = "https://dev-files.blender.org/file/download/fbesofb22svautbktglp/PHID-FILE-onmshh3l6jhqdeq3ctdz/sample.rar"
+test_image_url = 'https://picsum.photos/512/512'
 
 
 def test_call_for_ret_code():
@@ -88,12 +88,12 @@ def test_extract_tar(tar_file):
 def test_extract_rar(rar_file):
     destination = tempfile.mkdtemp()
     utils.extract(rar_file, destination, remove_archive_on_success=False)
-    assert(os.path.exists(os.path.join(destination, 'Fifteen_Feet_of_Time.pdf')))
+    assert(os.path.exists(os.path.join(destination, 'micro_orc.fbx')))
     shutil.rmtree(destination)
 
     destination = tempfile.mkdtemp()
     utils.unrar(rar_file, destination)
-    assert(os.path.exists(os.path.join(destination, 'Fifteen_Feet_of_Time.pdf')))
+    assert(os.path.exists(os.path.join(destination, 'micro_orc.fbx')))
     shutil.rmtree(destination)
 
 
@@ -109,8 +109,11 @@ def test_datetime():
     now = utils.get_now_datetime()
     ts = utils.get_now_timestamp()
     ts2 = utils.format_datetime(now)
-    assert(datetime.datetime.strptime(ts2, "%Y-%m-%d %H:%M:%S").today == now.today)
-    assert(isinstance(datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S"), datetime.datetime))
+
+    print(ts, ts2, now)
+
+    assert(datetime.datetime.strptime(ts2, "%Y-%m-%d_%H-%M-%S").today == now.today)
+    assert(isinstance(datetime.datetime.strptime(ts, "%Y-%m-%d_%H-%M-%S"), datetime.datetime))
 
 
 def test_get_files(zip_file):

@@ -12,5 +12,11 @@ def test_build_models():
         input_shape = (256, 256, 3)
         num_classes = 5
         model = models.get_model_by_name(name, {"input_shape": input_shape, "num_classes": num_classes})
-        assert(model.output.get_shape().as_list(), [None, input_shape[0], input_shape[1], num_classes])
+
+        if type(model.outputs) == list:
+            for output in model.outputs:
+                assert(output.get_shape().as_list(), [None, input_shape[0], input_shape[1], num_classes])
+
+        else:
+            assert(model.output.get_shape().as_list(), [None, input_shape[0], input_shape[1], num_classes])
         K.clear_session()

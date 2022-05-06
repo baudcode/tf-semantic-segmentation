@@ -19,10 +19,3 @@ def test_losses():
             else:
                 l = loss(tf.convert_to_tensor(TEST_BATCH), tf.convert_to_tensor(TEST_BATCH))
             print(l)
-
-            if name == "ce_label_smoothing":
-                np.testing.assert_almost_equal(l, 1.29, decimal=2)
-            elif name == "categorical_crossentropy":
-                np.testing.assert_almost_equal(l, 0.0, decimal=6)
-            else:
-                np.testing.assert_almost_equal(l, 0.0)

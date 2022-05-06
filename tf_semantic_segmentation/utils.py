@@ -379,7 +379,7 @@ def download_and_extract(url, destination_dir, chk_exists=True, overwrite=False,
     return destination_dir
 
 
-def get_now_timestamp():
+def get_now_timestamp() -> str:
     return format_datetime(datetime.now())
 
 

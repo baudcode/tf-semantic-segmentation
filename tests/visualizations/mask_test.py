@@ -36,10 +36,19 @@ def test_get_colored_segmentation():
     np.testing.assert_array_equal(seg_test, col)
 
 
+def test_get_colored_segmentation_v2():
+    num_classes = 5
+    predictions = np.ones((1, 32, 32, num_classes), np.float32)
+    predictions[:, :, :, 2] = 1.0
+    col = masks.get_colored_segmentation_mask_v2(predictions, num_classes)
+    key = list(col.keys())[0]
+    assert(col[key].shape == (1, 32, 32, 3) and col[key].dtype == 'uint8')
+
+
 def test_overlay_classes():
     image = np.zeros((32, 32, 3), np.uint8)
     num_classes = 5
-    colors = masks.get_colors(num_classes)
+    colors = masks.get_colors(num_classes - 1)
     mask = np.ones((32, 32), np.uint8) * 4
     overlay = masks.overlay_classes(image.copy(), mask, colors, num_classes, alpha=1.0)
-    assert(all(np.mean(overlay.mean(axis=0), axis=0) == list(map(float, colors[4]))))
+    assert(all(np.mean(overlay.mean(axis=0), axis=0) == list(map(float, colors[3]))))

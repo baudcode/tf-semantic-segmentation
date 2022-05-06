@@ -61,19 +61,57 @@ def apply_mask_v2(image, mask, color, alpha=0.5):
 
 
 def overlay_classes(image, target, colors, num_classes, alpha=0.5):
-    assert(len(colors) == (num_classes - 1))
     for k in range(1, num_classes):
-        print(f"applying color {colors[k - 1]} on class={k}")
         mask = np.where(target == k, 1, 0)
-        print((mask == 1).astype(np.uint8).sum())
-        print(image.shape, image.dtype, image.max(), image.min())
-        print(mask.shape, mask.dtype, mask.max(), mask.min())
-
-        image = apply_mask(image, mask, colors[k - 1], alpha=alpha)
+        image = apply_mask_v2(image, mask, colors[k - 1], alpha=alpha)
     return image
 
 
 def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_threshold=0.5, alpha=0.5):
+    """
+    Arguments:
+    predictions: ndarray - BHWC (if C=1 - np.float32 else np.uint8) probabilities
+    num_classes: int - number of classes
+    images: ndarray - float32 (0..1) or uint8 (0..255)
+    binary_threshold: float - when predicting only 1 value, threshold to set label to 1
+    alpha: float - overlay percentage
+    """
+    predictions = predictions.copy()
+    colors = get_colors_cmap(num_classes)
+
+    if images is None:
+        shape = (predictions.shape[0], predictions.shape[1], predictions.shape[2], 3)
+        images = np.zeros(shape, np.uint8)
+    else:
+        images = images.copy()
+
+        if images.dtype == "float32" or images.dtype == 'float64':
+            images = (images * 255).astype(np.uint8)
+
+        if images.shape[-1] == 1:
+            images = [cv2.cvtColor(i.copy(), cv2.COLOR_GRAY2RGB) for i in images]
+            images = np.asarray(images)
+
+    if predictions.shape[-1] == 1:
+        # remove channel dimension
+        predictions = np.squeeze(predictions, axis=-1)
+
+        # set either zero or one
+        predictions[predictions > binary_threshold] = 1.0
+        predictions[predictions <= binary_threshold] = 0.0
+    else:
+        # find the argmax channel from all channels
+        predictions = np.argmax(predictions, axis=-1)
+
+    predictions = predictions.astype(np.uint8)
+
+    for i in range(len(predictions)):
+        images[i, :, :, :] = overlay_classes(images[i, :, :, :].copy(), predictions[i], colors, num_classes, alpha=alpha)
+
+    return images
+
+
+def get_colored_segmentation_mask_v2(predictions, num_classes, images=None, binary_threshold=0.5, alpha=0.5, name=None):
     """
     Arguments:
 
@@ -104,14 +142,14 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
             images = np.asarray(images)
 
     # always assume the predictions have multiple resolutions
-    if not isinstance(predictions, list):
-        predictions = [predictions]
+    # if not isinstance(predictions, list):
+    # predictions = [predictions]
 
     outputs = {}
 
     # for every resolution
-    for p in predictions:
 
+    def process_prediction(p, name: str = None):
         overlays = []
 
         if p.shape[-1] == 1:
@@ -137,8 +175,21 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
             o = overlay_classes(image_resized, p[i], colors, num_classes, alpha=alpha)
             overlays.append(o)
 
-        shape = "x".join(map(str, shape))
-        outputs[shape] = overlays
+        if name == None:
+            name = "x".join(map(str, shape))
+
+        print(np.array(overlays).shape)
+        outputs[name] = np.array(overlays)
+
+    if type(predictions) == dict:
+        for name, p in predictions.items():
+            process_prediction(p, name)
+
+    elif type(predictions) == np.ndarray:
+        process_prediction(predictions, name=name)
+    else:
+        for p in predictions:
+            process_prediction(p)
 
     return outputs
 

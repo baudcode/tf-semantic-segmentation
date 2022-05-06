@@ -1,6 +1,7 @@
 from ..datasets import datasets_by_name, get_dataset_by_name, get_cache_dir, DataType
 from ..datasets.utils import convert2tfdataset
 from ..processing.dataset import ColorMode, resize_and_change_color
+from ..datasets.dataset import Dataset
 from ..datasets.tfrecord import TFWriter
 from ..settings import logger
 
@@ -25,16 +26,19 @@ def read_labels(path):
     return labels
 
 
-def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mode=ColorMode.NONE, overwrite=False, batch_size=4):
+def export(ds: Dataset, output_dir, size=None, resize_method="resize_with_pad", color_mode=ColorMode.NONE, overwrite=False, batch_size=4):
 
     os.makedirs(output_dir, exist_ok=True)
     write_labels(os.path.join(output_dir, 'labels.txt'), ds.labels)
 
-    def preprocess_fn(image, mask, num_classes):
+    def preprocess_fn(image, mask):
         image = tf.image.convert_image_dtype(image, tf.float32)
         image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method)
         image = tf.image.convert_image_dtype(image, tf.uint8)
         return image, mask
+
+    # cannot use different sized images when images are different
+    batch_size = 1 if size == None else batch_size
 
     for data_type in DataType.get():
         masks_dir = os.path.join(output_dir, data_type, 'masks')
@@ -43,8 +47,10 @@ def export(ds, output_dir, size=None, resize_method="resize_with_pad", color_mod
         os.makedirs(masks_dir, exist_ok=True)
         os.makedirs(images_dir, exist_ok=True)
 
-        tfds = convert2tfdataset(ds, data_type)
+        tfds = ds.tfdataset_v2(data_type, color_mode)
+
         tfds = tfds.map(preprocess_fn, num_parallel_calls=multiprocessing.cpu_count())
+
         tfds = tfds.batch(batch_size)
 
         total_examples = ds.num_examples(data_type)

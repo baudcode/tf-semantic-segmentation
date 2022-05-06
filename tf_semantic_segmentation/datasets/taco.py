@@ -19,6 +19,7 @@ class Taco(Dataset):
      'Pop tab', 'Straw', 'Cigarette', 'Unlabeled litter', 'Plastic bag & wrapper', 'Battery'}
     """
     MODES = ['supercategory', 'category', 'binary']
+    supports_v2 = True
 
     def __init__(self, cache_dir, mode='supercategory'):
         super(Taco, self).__init__(cache_dir)

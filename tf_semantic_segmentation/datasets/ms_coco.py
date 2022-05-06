@@ -120,6 +120,8 @@ class Coco(Dataset):
         }
     }
 
+    supports_v2 = True
+
     def __init__(self, cache_dir, mode='supercategory', year=2014):
         super(Coco, self).__init__(cache_dir)
         self.year = year

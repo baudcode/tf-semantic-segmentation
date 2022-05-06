@@ -25,6 +25,7 @@ class SuperviselyPerson(Dataset):
 
     DATA_URL = "https://cloud.enterprise.deepsystems.io/s/TK2z5TLYoAPl1w6/download"
     SAMPLE_DATA_URL = "https://cloud.enterprise.deepsystems.io/s/7VyML7ynZ9L1KEK/download"
+    supports_v2 = True
 
     def __init__(self, cache_dir, sample: bool = False):
         super(SuperviselyPerson, self).__init__(cache_dir)

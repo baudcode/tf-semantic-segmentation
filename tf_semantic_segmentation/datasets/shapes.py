@@ -19,6 +19,7 @@ from ..threading import parallize_v3
 class ShapesDS(Dataset):
 
     SHAPES = ['rectangle', 'triangle', 'circle']
+    supports_v2 = True
 
     def __init__(self, cache_dir, num_examples=10000, size=(512, 512), overwrite=False, color_mode=ColorMode.RGB, max_shapes_per_example=3):
         super(ShapesDS, self).__init__(cache_dir)

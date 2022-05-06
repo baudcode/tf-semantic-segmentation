@@ -15,6 +15,7 @@ class MappingChallenge(Dataset):
 
     TRAIN_URL = "https://crowdai-prd.s3.eu-central-1.amazonaws.com/dataset_files/challenge_25/8e089a94-555c-4d7b-8f2f-4d733aebb058_train.tar.gz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAILFF3ZEGG7Y4HXEQ%2F20191218%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20191218T022310Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=5d49a86529cc2078a6ab4da22e7fe1b9e3b5dff2187fd106190799cb034eaa5c"
     VAL_URL = "https://crowdai-prd.s3.eu-central-1.amazonaws.com/dataset_files/challenge_25/0a5c561f-e361-4e9b-a3e2-94f42a003a2b_val.tar.gz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAILFF3ZEGG7Y4HXEQ%2F20191218%2Feu-central-1%2Fs3%2Faws4_request&X-Amz-Date=20191218T022310Z&X-Amz-Expires=604800&X-Amz-SignedHeaders=host&X-Amz-Signature=76d8cbe79f17cdd673fe44135c3f0c456ae25f89756854b67958441a09d15716"
+    supports_v2 = True
 
     def __init__(self, cache_dir):
         super(MappingChallenge, self).__init__(cache_dir)

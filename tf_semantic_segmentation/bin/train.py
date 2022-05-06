@@ -325,7 +325,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if not args.no_tensorboard_metrics:
         callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=True, profile_batch=0,
-                                                write_images=True, write_grads=args.tensorboard_write_grads, update_freq=args.tensorboard_update_freq))
+                                                write_images=False, write_grads=args.tensorboard_write_grads, update_freq=args.tensorboard_update_freq))
 
     if not args.no_terminate_on_nan:
         callbacks.append(kcallbacks.TerminateOnNaN())

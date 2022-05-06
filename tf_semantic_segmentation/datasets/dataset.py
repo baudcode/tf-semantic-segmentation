@@ -16,6 +16,7 @@ import math
 import numpy as np
 from tensorflow.keras.utils import Sequence
 import tensorflow as tf
+import cv2
 
 
 class DataType:
@@ -27,6 +28,8 @@ class DataType:
 
 
 class Dataset(object):
+
+    supports_v2 = False
 
     def __init__(self, cache_dir):
         self.cache_dir = cache_dir
@@ -103,51 +106,105 @@ class Dataset(object):
 
         imageio.imwrite(mask_path, mask)
 
-    def tfdataset_v2(self, data_type: str, color_mode: ColorMode, shuffle=False, reshuffle_each_iteration=True, buffer_size=-1) -> tf.data.Dataset:
+    def tfdataset_v2(self, data_type: str, color_mode: ColorMode = ColorMode.RGB, shuffle=False, reshuffle_each_iteration=True, buffer_size=-1) -> tf.data.Dataset:
         """ 
         Dataset().raw() as to return a dict for data_type to X
         X is a list of tuple [image_path, mask_path, optional: difficulty]
 
         Loads images and masks from image and mask paths.
         """
-        data = self.raw()[data_type]
-
-        image_paths = [d[0] for d in data]
-        mask_paths = [d[1] for d in data]
-        if len(data[0]) == 3:
-            difficulty = [d[2] for d in data]
-        else:
-            difficulty = None
-
-        assert(len(image_paths) == len(mask_paths)), "len of images does not equal len of masks"
-
-        images_ds = tf.data.Dataset.from_tensor_slices(image_paths)
-        masks_ds = tf.data.Dataset.from_tensor_slices(mask_paths)
-
         channels = 3 if color_mode == ColorMode.RGB else 1
 
-        @tf.function
-        def load(image_path: str, mask_path: str, difficulty: int = None):
-            image = load_image(image_path, tf.uint8, squeeze=False, channels=channels)
-            mask = load_image(mask_path, tf.uint8, squeeze=True, channels=1)
+        if hasattr(self, "supports_v2") and self.supports_v2:
+            logger.info("using v2 load_image approach")
 
-            if difficulty != None:
-                return image, mask, difficulty
+            data = self.raw()[data_type]
+
+            image_paths = [d[0] for d in data]
+            mask_paths = [d[1] for d in data]
+
+            if len(data[0]) == 3:
+                difficulty = [d[2] for d in data]
             else:
-                return image, mask
+                difficulty = None
 
-        if difficulty is None:
-            dataset = tf.data.Dataset.zip((images_ds, masks_ds))
+            assert(len(image_paths) == len(mask_paths)), "len of images does not equal len of masks"
+
+            images_ds = tf.data.Dataset.from_tensor_slices(image_paths)
+            masks_ds = tf.data.Dataset.from_tensor_slices(mask_paths)
+
+            @tf.function
+            def load(image_path: str, mask_path: str, difficulty: int = None):
+                image = load_image(image_path, tf.uint8, squeeze=False, channels=channels)
+                mask = load_image(mask_path, tf.uint8, squeeze=True, channels=1)
+
+                if difficulty != None:
+                    return image, mask, difficulty
+                else:
+                    return image, mask
+
+            if difficulty is None:
+                dataset = tf.data.Dataset.zip((images_ds, masks_ds))
+            else:
+                difficulty_ds = tf.data.Dataset.from_tensor_slices(difficulty)
+                dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
+
+            if shuffle:
+                buffer_size = buffer_size if buffer_size != -1 else len(data)
+                dataset = dataset.shuffle(buffer_size=buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
+
+            # load images
+            dataset = dataset.map(load, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         else:
-            difficulty_ds = tf.data.Dataset.from_tensor_slices(difficulty)
-            dataset = tf.data.Dataset.zip((images_ds, masks_ds, difficulty_ds))
+            # use generator
+            logger.info("using v1 generator approach")
 
-        if shuffle:
-            buffer_size = buffer_size if buffer_size != -1 else len(data)
-            dataset = dataset.shuffle(buffer_size=buffer_size, reshuffle_each_iteration=reshuffle_each_iteration)
+            self.indexes = np.arange(self.num_examples(data_type))
 
-        # load images
-        dataset = dataset.map(load, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+            if shuffle:
+                self.indexes = np.random.permutation(self.indexes)
+
+            def gen():
+                if reshuffle_each_iteration:
+                    self.indexes = np.random.permutation(self.indexes)
+
+                data = self.raw()[data_type]
+
+                for idx in self.indexes:
+                    example = data[idx]
+
+                    try:
+                        e = self.parse_example(example)
+
+                        image = e[0]
+
+                        if len(image.shape) == 2:
+                            image = np.expand_dims(image, axis=-1)
+
+                        if image.shape[-1] == 1 and channels == 3:
+                            image = cv2.cvtColor(np.squeeze(image, axis=-1), cv2.COLOR_GRAY2RGB)
+
+                        elif image.shape[-1] == 3 and channels == 1:
+                            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+                            image = np.expand_dims(image, axis=-1)
+
+                        # remove alpha
+                        image = image[:, :, :3]
+                        mask = e[1]
+
+                        if len(mask.shape) == 3 and mask.shape[-1] != 1:
+                            raise Exception(f"invalid mask shape: {mask.shape}")
+
+                        elif len(mask.shape) == 3:
+                            mask = np.squeeze(mask, axis=-1)
+
+                        yield image, mask
+                    except Exception as e:
+                        raise e
+                        logger.error(f"could not read either one of these files {example} - {e}")
+
+            dataset = tf.data.Dataset.from_generator(
+                gen, (tf.uint8, tf.uint8), ([None, None, None], [None, None]))
 
         return dataset
 
@@ -173,6 +230,18 @@ class Dataset(object):
                 except:
                     logger.error("could not read either one of these files %s" % str(example))
         return gen
+
+    def test(self):
+        """ Testing the functionality of the dataset"""
+        logger.debug("testing dataset %s" % self.__class__.__name__)
+        for data_type in DataType.get():
+            logger.debug("using data_type %s" % data_type)
+            tfds = self.tfdataset_v2(data_type)
+
+            for image, mask in tfds:
+                logger.debug("image shape: %s, %s |  mask shape: %s, %s, %d (max) | num_classes: %d" % (image.shape, image.dtype, mask.shape, mask.dtype, mask.numpy().max(), self.num_classes))
+
+        return image.numpy(), mask.numpy()
 
 
 class SequenceDataset(Sequence):

@@ -128,7 +128,7 @@ class Dataset(object):
 
         @tf.function
         def load(image_path: str, mask_path: str, difficulty: int = None):
-            image = load_image(image_path, tf.float32, squeeze=False, channels=channels)
+            image = load_image(image_path, tf.uint8, squeeze=False, channels=channels)
             mask = load_image(mask_path, tf.uint8, squeeze=True, channels=1)
 
             if difficulty != None:

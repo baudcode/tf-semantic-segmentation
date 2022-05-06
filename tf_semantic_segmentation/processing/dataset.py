@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from tf_semantic_segmentation.datasets.utils import Color, logger
 from . import ColorMode
@@ -124,7 +124,6 @@ def resize(image, mask, size, resize_method):
     return image, mask
 
 
-@tf.function
 def process_mask_v2(mask, scale_mask: bool, num_classes: int):
     print(f"using mask scaling={scale_mask} num_classes={num_classes}")
     if scale_mask:
@@ -137,18 +136,20 @@ def process_mask_v2(mask, scale_mask: bool, num_classes: int):
     return mask
 
 
-def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
+def get_preprocess_fn_v2(size: Optional[tuple], num_classes: int, resize_method: str,
                          scale_mask: bool = False,
                          multiscale: Dict[str, Tuple[int, int]] = {}):
 
     @tf.function
-    def map_fn(image, mask):
+    def map_fn(image, mask, sample_weight=None):
         # expect image and mask to be dtype=uint8
-
         image = tf.image.convert_image_dtype(image, tf.float32)
+
         # resize method for image create float32 image anyway
         # image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
-        image, mask = resize(image, mask, size, resize_method)
+        if size != None:
+            image, mask = resize(image, mask, size, resize_method)
+
         mask = process_mask_v2(mask, scale_mask, num_classes)
 
         if len(list(multiscale.keys())) > 0:
@@ -170,12 +171,16 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
                     scaled_output = tf.squeeze(scaled_output, axis=-1)
 
                 outputs[name] = scaled_output
-                print(scaled_output.shape)
 
-            return image, outputs
+            if sample_weight is None:
+                return image, (outputs, sample_weight)
+            else:
+                return image, outputs
         else:
-
-            return image, mask
+            if sample_weight is None:
+                return image, mask
+            else:
+                return image, (mask, sample_weight)
 
     return map_fn
 

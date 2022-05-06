@@ -26,6 +26,7 @@ class Toy(Dataset):
         "train_images": "http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz",
         "test_images": "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz"
     }
+    supports_v2 = True
 
     def __init__(self, cache_dir):
         super(Toy, self).__init__(cache_dir)

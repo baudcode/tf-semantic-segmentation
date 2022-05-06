@@ -50,6 +50,7 @@ class SunRGBD(Dataset):
     """
 
     DATA_URL = "http://rgbd.cs.princeton.edu/data/SUNRGBD.zip"
+    supports_v2 = True
 
     def __init__(self, cache_dir, data_path="kv2/kinect2data/"):
         super(SunRGBD, self).__init__(cache_dir)

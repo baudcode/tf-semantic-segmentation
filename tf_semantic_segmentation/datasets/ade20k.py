@@ -16,6 +16,7 @@ class Ade20k(Dataset):
 
     DATA_URL = "http://data.csail.mit.edu/places/ADEchallenge/ADEChallengeData2016.zip"
     LABELS_URL = "https://raw.githubusercontent.com/CSAILVision/sceneparsing/master/objectInfo150.csv"
+    supports_v2 = True
 
     @property
     def labels(self):
@@ -28,7 +29,6 @@ class Ade20k(Dataset):
     def raw(self):
         extract_dir = download_and_extract(self.DATA_URL, self.cache_dir)
         extract_dir = os.path.join(extract_dir, "ADEChallengeData2016")
-        print(extract_dir)
 
         val_images_dir = os.path.join(extract_dir, 'images', 'validation')
         train_images_dir = os.path.join(extract_dir, 'images', 'training')
@@ -51,6 +51,5 @@ class Ade20k(Dataset):
 
 if __name__ == "__main__":
 
-    from .utils import test_dataset
-    ade20k = Ade20k('/hdd/datasets/ade20k')
-    test_dataset(ade20k)
+    ade20k = Ade20k('/data/datasets/ade20k')
+    ade20k.test()

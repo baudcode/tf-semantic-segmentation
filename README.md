@@ -35,6 +35,9 @@ See upcoming features on our [roadmap](ROADMAP.md).
   - Toy (Overlaying TinyImageNet with MNIST)
   - ISIC2018
   - CVC-ClinicDB
+  - Duts
+  - Supervisely Person
+  - BioImageBenchmark
 
 
 
@@ -47,12 +50,13 @@ See upcoming features on our [roadmap](ROADMAP.md).
   - [PSP](https://arxiv.org/abs/1612.01105) (experimental)
   - [FCN](https://arxiv.org/abs/1411.4038) (experimental)
   - [NestedUnet (Unet++)](https://arxiv.org/abs/1807.10165) (experimental)
-  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007) (experimental)
+  - [U2Net / U2NetP](https://arxiv.org/abs/2005.09007)
   - SatelliteUnet
   - MobilenetUnet (unet with mobilenet encoder pre-trained on imagenet)
   - InceptionResnetV2Unet (unet with inception-resnet v2 encoder pre-trained on imagenet)
   - ResnetUnet (unet with resnet50 encoder pre-trained on imagenet)
   - AttentionUnet
+  - MobilenetUnetMutliscale (unet with mobilenet encoder pre-trained on imagenet with multi resolution outputs)
 
 #### Losses
 
@@ -87,6 +91,7 @@ See upcoming features on our [roadmap](ROADMAP.md).
   - flip up/down
   - rot 180
   - color
+  - bw
 
 ## [Getting Started](#getting-started)
 

@@ -143,7 +143,9 @@ def get_preprocess_fn_v2(size: tuple, num_classes: int, resize_method: str,
 
     @tf.function
     def map_fn(image, mask):
+        # expect image and mask to be dtype=uint8
 
+        image = tf.image.convert_image_dtype(image, tf.float32)
         # resize method for image create float32 image anyway
         # image, mask = resize_and_change_color(image, mask, size, color_mode, resize_method=resize_method, mode=mode)
         image, mask = resize(image, mask, size, resize_method)
@@ -289,6 +291,20 @@ def random_flip_lr(**args):
     return args
 
 
+def random_bw(**args):
+
+    def _invert_colors(x):
+        gray = tf.image.rgb_to_grayscale(x)
+        return tf.image.grayscale_to_rgb(gray)
+
+    bool_right_left = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
+    for k, x in args.items():
+        x = tf.cond(bool_right_left, lambda: _invert_colors(x), lambda: x)
+        args[k] = x
+
+    return args
+
+
 def random_rot90(**args):
     condition = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
     for k, x in args.items():
@@ -308,6 +324,20 @@ def random_flip_ud(**args):
     for k, x in args.items():
         x = tf.cond(bool_up_down, lambda: tf.image.flip_up_down(x), lambda: x)
         args[k] = x
+    return args
+
+
+def random_rot(**args):
+    import tensorflow_addons as tfa
+
+    cond = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
+
+    angle = tf.random.uniform(shape=[], min_val=0, maxval=1.0, dtype=tf.float32)
+    angle = tf.cast(angle * 360, tf.int32)
+
+    for k, x in args.items():
+        args[k] = tf.cond(cond, lambda: tfa.image.rotate(x, angle), lambda: x)
+
     return args
 
 
@@ -366,7 +396,7 @@ def random_zoom(size, batch_size, **args):
     return args
 
 
-augmentation_methods = ['rot180', 'flip_lr', 'flip_ud', 'color', 'rot90']
+augmentation_methods = ['rot180', 'flip_lr', 'flip_ud', 'color', 'rot90', 'bw', 'rot']
 
 
 def get_augment_fn(size, batch_size, methods=augmentation_methods):
@@ -394,6 +424,14 @@ def get_augment_fn(size, batch_size, methods=augmentation_methods):
         if 'flip_ud' in methods:
             flip = random_flip_ud(images=images, masks=masks)
             images, masks = flip['images'], flip['masks']
+
+        # if 'rot' in methods:
+        #     rot = random_bw(images=images, masks=masks)
+        #     images, masks = rot['images'], rot['masks']
+
+        if 'bw' in methods:
+            bw = random_bw(images=images)
+            images = bw['images']
 
         # random zoom
         if 'zoom' in methods:

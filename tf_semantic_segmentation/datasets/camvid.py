@@ -1,5 +1,6 @@
 from .dataset import Dataset
 from ..utils import get_files, download_and_extract, download_file
+from ..threading import parallize_v3
 from .utils import get_split, DataType, Color
 
 import imageio
@@ -16,19 +17,51 @@ class CamSeq01(Dataset):
 
     DATA_URL = "http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamSeq01/CamSeq01.zip"
     LABEL_COLORS_URL = "http://mi.eng.cam.ac.uk/research/projects/VideoRec/CamVid/data/label_colors.txt"
+    supports_v2 = True
 
     def __init__(self, cache_dir):
         super(CamSeq01, self).__init__(cache_dir)
         self._labels = self.labels
         self._colormap = self.colormap
+        self._masks_dir = os.path.join(cache_dir, "masks")
+        os.makedirs(self._masks_dir, exist_ok=True)
 
-    def raw(self):
+        self.generate_masks()
+
+    def _generate_mask(self, target_path):
+        t = imageio.imread(target_path)
+        mask = np.zeros((t.shape[0], t.shape[1]), np.uint8)
+
+        for color, label in self._colormap.items():
+            color = [color.r, color.g, color.b]
+            idxs = np.where(np.all(t == color, axis=-1))
+            mask[idxs] = self._labels.index(label)
+            del idxs
+
+        # write mask to output path
+        imageio.imwrite(os.path.join(self._masks_dir, os.path.basename(target_path)), mask)
+
+    def generate_masks(self):
+        _, target_files = self._get_trainset()
+        generated_masks = get_files(self._masks_dir, extensions=['png'])
+
+        if len(generated_masks) != len(target_files):
+            parallize_v3(self._generate_mask, target_files, desc='generating masks')
+        else:
+            print("masks already generated")
+
+    def _get_trainset(self):
         dataset_dir = os.path.join(self.cache_dir, 'dataset')
         extracted = download_and_extract(self.DATA_URL, dataset_dir)
         imgs = get_files(extracted, extensions=["png"])
         images = list(filter(lambda x: not x.endswith("_L.png"), imgs))
         labels = list(filter(lambda x: x.endswith("_L.png"), imgs))
-        trainset = list(zip(images, labels))
+        return images, labels
+
+    def raw(self):
+        images, _ = self._get_trainset()
+        masks = get_files(self._masks_dir, extensions=['png'])
+        trainset = list(zip(images, masks))
         return get_split(trainset)
 
     @property
@@ -75,7 +108,5 @@ class CamSeq01(Dataset):
 
 
 if __name__ == "__main__":
-    from .utils import test_dataset
-
-    ds = CamSeq01('/hdd/datasets/camvid')
-    test_dataset(ds)
+    ds = CamSeq01('/data/datasets/camvid')
+    ds.test()

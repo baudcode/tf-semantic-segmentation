@@ -113,7 +113,7 @@ class Dataset(object):
 
         Loads images and masks from image and mask paths.
         """
-        channels = 3 if color_mode == ColorMode.RGB else 1
+        channels = 3 if color_mode == ColorMode.RGB or color_mode == ColorMode.NONE else 1
 
         if hasattr(self, "supports_v2") and self.supports_v2:
             logger.info("using v2 load_image approach")
@@ -165,7 +165,7 @@ class Dataset(object):
                 self.indexes = np.random.permutation(self.indexes)
 
             def gen():
-                if reshuffle_each_iteration:
+                if shuffle and reshuffle_each_iteration:
                     self.indexes = np.random.permutation(self.indexes)
 
                 data = self.raw()[data_type]

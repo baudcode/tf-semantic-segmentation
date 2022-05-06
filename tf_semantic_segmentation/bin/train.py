@@ -190,6 +190,7 @@ def get_args(args=None):
     # model checkpoints
     parser.add_argument('--no_model_checkpoint', action='store_true', help='if specified, do not add callback for model checkpointing')
     parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str, help='monitor metric/loss when checkpointing (used for wandb as well)')
+    parser.add_argument('-mc-mode', '--model_checkpoint_mode', default='min', choices=['min', 'max'], type=str, help='minimize or maximize the model metric')
     parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true', help='if specified, do not save the best weights only')
 
     # auto start tensorboard
@@ -303,7 +304,9 @@ def train_test_model(args, hparams=None, reporter=None):
             args.logdir = os.path.join("logs", args.wandb_project, "%s-%s" % (get_now_timestamp(), str(wandb_run.id)))
             logger.info("Using logdir %s, because None was specified" % args.logdir)
 
-    if args.logdir is None:
+        callbacks.append(custom_callbacks.WBCallback(args.logdir, str(args.model), run_id=wandb_run.id, monitor_metric=args.model_checkpoint_monitor, mode=args.model_checkpoint_mode))
+
+    elif args.logdir is None:
 
         name = get_logdir_name(args)
         args.logdir = os.path.join("logs", "default", name)
@@ -330,6 +333,7 @@ def train_test_model(args, hparams=None, reporter=None):
     if not args.no_model_checkpoint:
         callbacks.append(kcallbacks.ModelCheckpoint(os.path.join(args.logdir, "model-best.h5"),
                                                     monitor=args.model_checkpoint_monitor,  # val_loss default
+                                                    mode=args.model_checkpoint_mode,
                                                     verbose=1,
                                                     save_best_only=not args.no_save_best_only,
                                                     period=1))
@@ -474,6 +478,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     logger.info("creating model %s" % args.model)
     with strategy.scope():
+
         model_args = {'input_shape': input_shape, "num_classes": model_num_classes}
         model_args.update(args.model_args)
 

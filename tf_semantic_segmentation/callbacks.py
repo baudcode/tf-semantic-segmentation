@@ -540,3 +540,65 @@ class MLFlowCallback(tf.keras.callbacks.Callback):
 
         except Exception as e:
             logger.error("could not send metrics to mlflow: %s" % str(e))
+
+
+class WBCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, logdir: str, model_name: str, run_id: str = None, monitor_metric: str = "val_iou_score", mode: str = 'max'):
+        super(WBCallback, self).__init__()
+        self.logdir = logdir
+        self.model_name = model_name
+        self.epoch = 0
+        self.monitor_metric = monitor_metric
+        self.history = []
+        self.run_id = run_id
+
+        if mode == 'min':
+            self.monitor_op = np.less
+            self.best = np.Inf
+        elif mode == 'max':
+            self.monitor_op = np.greater
+            self.best = -np.Inf
+        else:
+            raise Exception(f"invalid mode {mode}")
+
+        logger.info(f"Initialized w&b callback [metric={monitor_metric} | mode={mode} | monitor_op={self.monitor_op}]")
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch = epoch
+
+    def on_epoch_end(self, epoch, logs=None):
+
+        current = logs[self.monitor_metric]
+
+        if self.monitor_op(current, self.best):
+            self.best = current
+
+            output_dir = os.path.join(self.logdir, 'models', f"{self.monitor_metric}-{round(self.best, 6)}")
+            os.makedirs(output_dir, exist_ok=True)
+
+            self.model.save(output_dir)
+
+            try:
+                import wandb
+                name = self.model_name + "_" + self.run_id if self.run_id != None else self.model_name
+
+                artifact = wandb.Artifact(name, type='model', metadata={
+                    "epochs": epoch,
+                    "model": self.model_name,
+                    "run_id": self.run_id,
+                    "score": current,
+                    "metric": self.monitor_metric
+                })
+
+                artifact.add_dir(output_dir)
+                logger.info(f"saving w&b model artifact {output_dir}")
+                artifact.save()
+
+            except:
+                import traceback
+                traceback.print_exc()
+                logger.error("couldn't log w&b model")
+
+        else:
+            logger.warning("current max metric did not improve")

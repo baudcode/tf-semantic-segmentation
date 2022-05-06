@@ -99,8 +99,9 @@ sudo apt-get install libsm6 libxext6 libxrender-dev libyaml-dev libpython3-dev
 #### Tensorflow (2.x) & Tensorflow Addons (optional)
 
 ```shell
-pip install tensorflow-gpu==2.4.0 --upgrade
-pip install tensorflow-addons==0.12.0 --upgrade
+pip install tensorflow-gpu==2.7.0 --upgrade
+pip install tensorflow-addons==0.15.0 --upgrade
+pip install tensorboard==2.7.0 --upgrade
 ```
 
 ### Installation

@@ -189,7 +189,7 @@ def get_args(args=None):
 
     # model checkpoints
     parser.add_argument('--no_model_checkpoint', action='store_true', help='if specified, do not add callback for model checkpointing')
-    parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str, help='monitor metric/loss when checkpointing')
+    parser.add_argument('-mc-monitor', '--model_checkpoint_monitor', default='val_loss', type=str, help='monitor metric/loss when checkpointing (used for wandb as well)')
     parser.add_argument('-mc-no-sbo', '--no_save_best_only', action='store_true', help='if specified, do not save the best weights only')
 
     # auto start tensorboard
@@ -209,6 +209,7 @@ def get_args(args=None):
     parser.add_argument('-tb_images_freq', '--tensorboard_images_freq', type=int, default=1, help='after every $ epoch, log images [only used for test/val]')
     parser.add_argument('-binary_thresh', '--binary_threshold', type=float, default=0.5, help='values above threshold are rounded to 1.0, below to 0.0')
     parser.add_argument('-tb_uf', '--tensorboard_update_freq', default='batch', type=str, choices=['batch', 'epoch'], help='update frequency [batch or epoch] of tensorboard')
+    parser.add_argument('--tensorboard_write_grads', action='store_true', help='write gradients to tensorboard (and wandb)')
     parser.add_argument("--save_val_images", action='store_true', help='saves val images to logdir/val/samples')
     parser.add_argument("--save_train_images", action='store_true', help='saves val images to logdir/train/samples')
     parser.add_argument("--save_test_images", action='store_true', help='saves val images to logdir/test/samples')
@@ -291,6 +292,10 @@ def train_test_model(args, hparams=None, reporter=None):
     # setting up wandb
     if args.wandb_project:
         import wandb
+
+        if args.logdir is not None:
+            wandb.tensorboard.patch(root_logdir=args.logdir)
+
         wandb_run = wandb.init(project=args.wandb_project, config=args, name=args.run_name, sync_tensorboard=True, reinit=True)
         callbacks.append(wandb.keras.WandbCallback())
 
@@ -317,7 +322,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     if not args.no_tensorboard_metrics:
         callbacks.append(kcallbacks.TensorBoard(log_dir=args.logdir, histogram_freq=0, write_graph=True, profile_batch=0,
-                                                write_images=False, write_grads=True, update_freq=args.tensorboard_update_freq))
+                                                write_images=True, write_grads=args.tensorboard_write_grads, update_freq=args.tensorboard_update_freq))
 
     if not args.no_terminate_on_nan:
         callbacks.append(kcallbacks.TerminateOnNaN())
@@ -491,6 +496,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
         if len(model.outputs) > 1:
             outputs = []
+            assert(len(set([o.name for o in model.outputs])) == len(model.outputs)), "model must have unique output names"
 
             for o in model.outputs:
                 try:
@@ -532,18 +538,17 @@ def train_test_model(args, hparams=None, reporter=None):
 
         opt = get_optimizer_by_name(args.optimizer, lr)
 
-        if len(model.outputs) == 1:
-            loss_weights = None
-        else:
-            if len(set(["%s" % ("x".join(map(str, o.shape[1:]))) for o in model.outputs])) == 1:
-                logger.info("only 1 output shape in multi output model. not using any loss weights")
-                loss_weights = None
-            else:
-                loss_weights = None if len(model.outputs) == 1 else [0.1 * pow(2, i) for i in range(len(model.outputs))]
+        # if len(model.outputs) == 1:
+        #     loss_weights = None
+        # else:
+        #     if len(set(["%s" % ("x".join(map(str, o.shape[1:]))) for o in model.outputs])) == 1:
+        #         logger.info("only 1 output shape in multi output model. not using any loss weights")
+        #         loss_weights = None
+        #     else:
+        #         loss_weights = None if len(model.outputs) == 1 else [0.1 * pow(2, i) for i in range(len(model.outputs))]
+        # logger.info(f"using loss weights {loss_weights}")
 
-        logger.info(f"using loss weights {loss_weights}")
-
-        model.compile(optimizer=opt, loss=loss, metrics=metrics, loss_weights=loss_weights)  # metrics=losses
+        model.compile(optimizer=opt, loss=loss, metrics=metrics)  # metrics=losses
 
     if args.summary:
         model.summary()

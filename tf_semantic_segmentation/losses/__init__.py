@@ -1,6 +1,6 @@
 from tensorflow.keras import backend as K
 from .utils import gather_channels, get_reduce_axes, round_if_needed, SMOOTH, average, onehot2image, expand_binary
-from .focal import binary_focal_loss, categorical_focal_loss
+from .focal import binary_focal_loss, categorical_focal_loss, smooth_l1
 from .ssim import ssim_loss
 from .ce import ce_label_smoothing_loss, categorical_crossentropy_loss, binary_crossentropy_loss, bce_label_smoothing_loss
 from .dice import dice_loss, tversky_loss, focal_tversky_loss
@@ -18,6 +18,7 @@ losses_by_name = {
     "binary_focal": binary_focal_loss(),
     "ssim": ssim_loss(),
     "dice": dice_loss(),
+    "smooth_l1": smooth_l1(),
     "tversky": tversky_loss(),
     # "binary_lovasz": binary_lovasz(),
     "categorical_lovasz": categorical_lovasz(),

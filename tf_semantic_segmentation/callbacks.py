@@ -20,15 +20,15 @@ from enum import Enum
 
 
 class Visualization(str, Enum):
-    INPUTS_WTIH_PREDICTIONS = "inputs/predictions"
+    INPUTS_WTIH_PREDICTIONS = "inputs-predictions"
     INPUTS = "inputs"
-    INPUTS_WITH_TARGETS = "inputs/targets"
-    TARGETS_RGB = "targets/rgb"
-    PREDICTIONS_RGB = "predictions/rgb"
+    INPUTS_WITH_TARGETS = "inputs-targets"
+    TARGETS_RGB = "targets-rgb"
+    PREDICTIONS_RGB = "predictions-rgb"
     TARGETS = "targets"
     PREDICTIONS = "predictions"
-    PREDICTIONS_WITH_THRESHOLD = "predictions/threshold"
-    INPUTS_WITH_CONTOURS = "inputs/contours"
+    PREDICTIONS_WITH_THRESHOLD = "predictions-threshold"
+    INPUTS_WITH_CONTOURS = "inputs-contours"
 
 
 DEFAULT_VISUALIZATIONS = [
@@ -131,12 +131,18 @@ class PredictionCallback(tf.keras.callbacks.Callback):
 
             def add_images(base_name: str, images_dict: dict):
 
-                for size, images in images_dict.items():
+                for size_or_name, images in images_dict.items():
 
-                    if len(list(images_dict.values())) == 1:
-                        name = base_name
+                    # if len(list(images_dict.values())) == 1:
+                    # name = base_name
+                    # else:
+                    if size_or_name == base_name:
+                        name = f"{base_name}"
                     else:
-                        name = f"{base_name}-{size}"
+                        name = f"{base_name}_{size_or_name}"
+
+                    if images[0].dtype != np.float32:
+                        images = tf.convert_to_tensor(images, tf.uint8)
 
                     # make one image
                     images = tf.split(images, num_or_size_splits=batch_size, axis=0)
@@ -172,19 +178,19 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                                 logger.error("could not log image for %s - %s" % (self.logdir_mode, str(e)))
 
             def visualize_input_with_predictions():
-                predictions_on_inputs = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                predictions_on_inputs = masks.get_colored_segmentation_mask_v2(pred_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
                 add_images(Visualization.INPUTS_WTIH_PREDICTIONS.value, predictions_on_inputs)
 
             def visualize_inputs_with_targets():
-                targets_on_inputs = masks.get_colored_segmentation_mask(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
+                targets_on_inputs = masks.get_colored_segmentation_mask_v2(target_batch, self.num_classes, images=input_batch, binary_threshold=self.binary_threshold)
                 add_images(Visualization.INPUTS_WITH_TARGETS.value, targets_on_inputs)
 
             def visualize_targets_rgb():
-                targets_rgb = masks.get_colored_segmentation_mask(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                targets_rgb = masks.get_colored_segmentation_mask_v2(target_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
                 add_images(Visualization.TARGETS_RGB.value, targets_rgb)
 
             def visualize_predictions_rgb():
-                pred_rgb = masks.get_colored_segmentation_mask(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
+                pred_rgb = masks.get_colored_segmentation_mask_v2(pred_batch, self.num_classes, binary_threshold=self.binary_threshold, alpha=1.0)
                 add_images(Visualization.PREDICTIONS_RGB, pred_rgb)
 
             def visualize_targets():

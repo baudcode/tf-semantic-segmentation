@@ -101,6 +101,7 @@ labels = [
 
 
 class Cityscapes(Dataset):
+    supports_v2 = True
 
     @property
     def labels(self):

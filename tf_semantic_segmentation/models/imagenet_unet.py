@@ -5,7 +5,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import Input
 from tensorflow.keras.applications import vgg16
 from tensorflow.keras import backend as K
-from tf_semantic_segmentation.models.erfnet import conv
 
 from .apps import resnet50, mobilenet, inception
 

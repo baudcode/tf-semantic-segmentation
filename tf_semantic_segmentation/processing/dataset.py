@@ -125,7 +125,7 @@ def resize(image, mask, size, resize_method):
 
 
 def process_mask_v2(mask, scale_mask: bool, num_classes: int):
-    print(f"using mask scaling={scale_mask} num_classes={num_classes}")
+    logger.info(f"using mask scaling={scale_mask} num_classes={num_classes}")
     if scale_mask:
         mask = tf.cast(mask, tf.float32)
         if num_classes > 2:
@@ -270,9 +270,10 @@ def prepare_dataset(dataset, batch_size, buffer_size=200, repeat=0, take=0, skip
         options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.DATA
         dataset = dataset.with_options(options)
     else:
-        options = tf.data.Options()
-        options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
-        dataset = dataset.with_options(options)
+        pass
+        # options = tf.data.Options()
+        # options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
+        # dataset = dataset.with_options(options)
 
     dataset = dataset.batch(batch_size)
 
@@ -467,7 +468,7 @@ if __name__ == "__main__":
     print("images shape, dtype ", images.shape, images.dtype)
     print("masks shape, dtype ", masks.shape, masks.dtype)
 
-    fn = get_augment_fn((width, height), 1, methods=['rot180', 'flip_lr', 'flip_ud', 'color'])
+    fn = get_augment_fn((width, height), 1, methods=['rot180', 'flip_lr', 'flip_ud', 'color', 'bw'])
 
     for i in range(5):
         _images = tf.identity(images)

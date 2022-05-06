@@ -83,7 +83,7 @@ def preprocess_input(x):
     return x
 
 
-class DepthwiseConv2D(Conv2D):
+class MobilenetDepthwiseConv2D(Conv2D):
     """Depthwise separable 2D convolution.
 
     Depthwise Separable convolutions consists in performing
@@ -171,7 +171,7 @@ class DepthwiseConv2D(Conv2D):
                  depthwise_constraint=None,
                  bias_constraint=None,
                  **kwargs):
-        super(DepthwiseConv2D, self).__init__(
+        super(MobilenetDepthwiseConv2D, self).__init__(
             filters=None,
             kernel_size=kernel_size,
             strides=strides,
@@ -191,7 +191,7 @@ class DepthwiseConv2D(Conv2D):
 
     def build(self, input_shape):
         if len(input_shape) < 4:
-            raise ValueError('Inputs to `DepthwiseConv2D` should have rank 4. '
+            raise ValueError('Inputs to `MobilenetDepthwiseConv2D` should have rank 4. '
                              'Received input shape:', str(input_shape))
         if self.data_format == 'channels_first':
             channel_axis = 1
@@ -199,7 +199,7 @@ class DepthwiseConv2D(Conv2D):
             channel_axis = 3
         if input_shape[channel_axis] is None:
             raise ValueError('The channel dimension of the inputs to '
-                             '`DepthwiseConv2D` '
+                             '`MobilenetDepthwiseConv2D` '
                              'should be defined. Found `None`.')
         input_dim = int(input_shape[channel_axis])
         depthwise_kernel_shape = (self.kernel_size[0],
@@ -269,7 +269,7 @@ class DepthwiseConv2D(Conv2D):
             return (input_shape[0], rows, cols, out_filters)
 
     def get_config(self):
-        config = super(DepthwiseConv2D, self).get_config()
+        config = super(MobilenetDepthwiseConv2D, self).get_config()
         config.pop('filters')
         config.pop('kernel_initializer')
         config.pop('kernel_regularizer')
@@ -298,12 +298,12 @@ def MobileNet(input_shape=None,
     at `~/.keras/keras.json`.
 
     To load a MobileNet model via `load_model`, import the custom
-    objects `relu6` and `DepthwiseConv2D` and pass them to the
+    objects `relu6` and `MobilenetDepthwiseConv2D` and pass them to the
     `custom_objects` parameter.
     E.g.
     model = load_model('mobilenet.h5', custom_objects={
                        'relu6': mobilenet.relu6,
-                       'DepthwiseConv2D': mobilenet.DepthwiseConv2D})
+                       'MobilenetDepthwiseConv2D': mobilenet.MobilenetDepthwiseConv2D})
 
     # Arguments
         input_shape: optional shape tuple, only to be specified
@@ -610,13 +610,13 @@ def _depthwise_conv_block(inputs, pointwise_conv_filters, alpha,
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
     pointwise_conv_filters = int(pointwise_conv_filters * alpha)
 
-    x = DepthwiseConv2D((3, 3),
-                        padding='same',
-                        depth_multiplier=depth_multiplier,
-                        strides=strides,
-                        dilation_rate=dilation_rate,
-                        use_bias=False,
-                        name='conv_dw_%d' % block_id)(inputs)
+    x = MobilenetDepthwiseConv2D((3, 3),
+                                 padding='same',
+                                 depth_multiplier=depth_multiplier,
+                                 strides=strides,
+                                 dilation_rate=dilation_rate,
+                                 use_bias=False,
+                                 name='conv_dw_%d' % block_id)(inputs)
     x = BatchNormalization(axis=channel_axis, name='conv_dw_%d_bn' % block_id)(x)
     x = Activation(relu6, name='conv_dw_%d_relu' % block_id)(x)
 

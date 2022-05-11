@@ -594,7 +594,7 @@ def train_test_model(args, hparams=None, reporter=None):
 
     # log images to tensorboard
     if (args.tensorboard_train_images and args.tensorboard_train_images_update_batch_freq > 0) or args.save_train_images:
-        train_ds_images = ds.tfdataset_v2(DataType.TRAIN, args.color_mode, shuffle=True, buffer_size=100) if args.train_on_generator else reader.get_dataset(DataType.TRAIN, False)
+        train_ds_images = ds.tfdataset_v2(DataType.TRAIN, args.color_mode, shuffle=True, buffer_size=100) if args.train_on_generator else reader.get_dataset(DataType.TRAIN, False, shuffle=True)
         train_ds_images = train_ds_images.map(val_preprocess_fn, num_parallel_calls=1)
         train_ds_images = preprocessing_ds.prepare_dataset(train_ds_images, args.num_tensorboard_images, prefetch=False)
         train_prediction_callback = custom_callbacks.BatchPredictionCallback(model, os.path.join(args.logdir, 'train'), train_ds_images,

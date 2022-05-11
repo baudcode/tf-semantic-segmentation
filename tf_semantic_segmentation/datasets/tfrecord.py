@@ -92,7 +92,7 @@ class TFReader:
 
     def num_examples(self, data_type) -> int:
         if data_type in self._num_examples:
-            return self._num_example[data_type]
+            return self._num_examples[data_type]
 
         examples = sum([1 for _ in self.get_dataset(data_type)])
         self._num_examples[data_type] = examples

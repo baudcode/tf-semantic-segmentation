@@ -17,6 +17,7 @@ import numpy as np
 from tensorflow.keras.utils import Sequence
 import tensorflow as tf
 import cv2
+import tqdm
 
 
 class DataType:
@@ -76,6 +77,34 @@ class Dataset(object):
 
     def total_examples(self):
         return sum([self.num_examples(dt) for dt in DataType.get()])
+
+    def iter(self, data_type=DataType.TRAIN, use_tq: bool = True):
+        data = self.raw()[data_type]
+
+        if use_tq:
+            for d in tqdm.tqdm(data):
+                yield self.parse_example(d)
+        else:
+            for d in data:
+                yield self.parse_example(d)
+
+    def has_one_shape(self) -> bool:
+        it = self.iter()
+        e = next(it)
+        shape = e[0].shape
+        logger.info(f"checking all images of shape {shape} (first image)")
+        for e in it:
+            if e[0].shape != shape:
+                return False
+
+        return True
+
+    @property
+    def input_shape(self) -> List[int]:
+        """ return the input shape of the first image """
+        it = self.iter()
+        e = next(it)
+        return e[0].shape
 
     def get_random_item(self, data_type=DataType.TRAIN):
         data = self.raw()[data_type]

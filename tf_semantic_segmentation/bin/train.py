@@ -165,8 +165,8 @@ def get_args(args=None):
     parser.add_argument('-dir', '--directory', default=None, help='training model on a directory containing images and masks')
     parser.add_argument('-aug', '--augmentations', default=[], type=any_of(preprocessing_ds.augmentation_methods),
                         help='a list of augmentations (%s) separated by comma' % str(preprocessing_ds.augmentation_methods))
-
     parser.add_argument('-tog', '--train_on_generator', action='store_true', help='training using the tf.data.Dataset.from_generator for faster iterations and not creating a tfrecord')
+
     parser.add_argument('-steps', '--steps_per_epoch', default=-1, type=int, help='if not set, will be calculated based on the number of examples in the record')
     parser.add_argument('-valsteps', '--validation_steps', default=-1, type=int, help='if not set, will be calculated based on the number of examples in the record')
 
@@ -427,8 +427,20 @@ def train_test_model(args, hparams=None, reporter=None):
         raise Exception("cannot find either dataset/directory/record_dir or record_tag")
 
     if args.size and args.color_mode != ColorMode.NONE:
-        input_shape = (args.size[0], args.size[1], 3 if args.color_mode == ColorMode.RGB else 1)
+        input_shape = (args.size[0], args.size[1], 1 if args.color_mode == ColorMode.GRAY else 3)
+    elif args.size == None:
+        # args.size
+        logger.info("checking that all images are the same size. size is set to None")
+        if not ds.has_one_shape():
+            raise Exception("dataset has images of different shapes. Please set --size=\"width,height\"")
+        else:
+            ds_shape = ds.input_shape
+            ds_channels = 1 if len(ds_shape) == 2 else ds_shape[-1]
+            num_output_channels = 1 if args.color_mode == ColorMode.GRAY else 3
+            if num_output_channels != ds_channels:
+                logger.warning(f"number of dataset output channels ({ds_channels}) does not align with chosen color mode {args.color_mode}")
 
+            input_shape = (ds_shape[1], ds_shape[0], num_output_channels)
     elif args.train_on_generator:
         raise Exception("please specify the 'size' and 'color_mode' argument when training using the generator")
     else:

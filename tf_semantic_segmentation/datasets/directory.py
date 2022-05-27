@@ -68,6 +68,8 @@ class DirectoryDataset(Dataset):
 
             trainset = list(zip(images, masks))
             self.split = get_split(trainset, rand=lambda: rand)
+        else:
+            raise Exception("cannot generate split. invalid directory structure")
 
     @property
     def labels(self):

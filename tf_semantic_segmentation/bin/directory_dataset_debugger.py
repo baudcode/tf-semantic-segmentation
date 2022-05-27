@@ -12,6 +12,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ds = DirectoryDataset(args.directory)
+    ds.summary()
 
     tfds = ds.tfdataset(DataType.TRAIN, randomize=True)
     fn = get_preprocess_fn_v2(args.size, ds.num_classes, 'resize', True)

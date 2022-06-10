@@ -436,7 +436,8 @@ def train_test_model(args, hparams=None, reporter=None):
         else:
             ds_shape = ds.input_shape
             ds_channels = 1 if len(ds_shape) == 2 else ds_shape[-1]
-            num_output_channels = 1 if args.color_mode == ColorMode.GRAY else 3
+            num_output_channels = 1 if args.color_mode == ColorMode.GRAY else 3 if args.color_mode == ColorMode.RGB else ds_channels
+
             if num_output_channels != ds_channels:
                 logger.warning(f"number of dataset output channels ({ds_channels}) does not align with chosen color mode {args.color_mode}")
 

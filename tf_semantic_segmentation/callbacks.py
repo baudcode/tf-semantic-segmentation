@@ -160,7 +160,8 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                             pass
 
                         if image.dtype == np.float32:
-                            image = (image * 255).astype(np.uint8)
+                            scaling_factor = float(self.num_classes) if not self.scaled_mask else 1.0
+                            image = (image * (255 / scaling_factor)).astype(np.uint8)
 
                         # reduce batch dim
                         img = image[0]
@@ -214,7 +215,7 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                     pred_batch_copy = np.argmax(pred_batch_copy, axis=-1).astype(np.float32)
                     pred_batch_copy = np.expand_dims(pred_batch_copy, axis=-1)
 
-                add_images(Visualization.PREDICTIONS.value, pred_batch_copy)
+                add_images(Visualization.PREDICTIONS.value, {"predictions": pred_batch_copy})
 
             def visualize_predictions_with_threshold():
                 pred_batch_copy = pred_batch.copy()
@@ -225,13 +226,13 @@ class PredictionCallback(tf.keras.callbacks.Callback):
                     pred_batch_copy[pred_batch_copy > self.binary_threshold] = 1.0
                     pred_batch_copy[pred_batch_copy <= self.binary_threshold] = 0.0
 
-                add_images(Visualization.PREDICTIONS.value, pred_batch_copy)
+                add_images(Visualization.PREDICTIONS.value, {"predictions_with_threshold": pred_batch_copy})
 
             def visualize_contours():
                 from tf_semantic_segmentation.processing import line
                 if self.num_classes == 2:
                     predictions_with_lines = line.process_batch(pred_batch, input_batch, binary_threshold=self.binary_threshold)
-                    add_images(Visualization.INPUTS_WITH_CONTOURS, predictions_with_lines)
+                    add_images(Visualization.INPUTS_WITH_CONTOURS, {"predictions_with_lines": predictions_with_lines})
                 else:
                     logger.warn("cannot log inputs with contours when num_classes != 2")
 

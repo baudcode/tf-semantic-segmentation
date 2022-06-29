@@ -15,7 +15,7 @@ def get_colors_cmap(N, shuffle=False):
     return colors
 
 
-def get_colors(N, shuffle=False, bright=True):
+def get_colors(N, shuffle=False, bright=True, black_is_first: bool = False):
     """
     https://github.com/pedropro/TACO/blob/master/detector/visualize.py
 
@@ -23,12 +23,13 @@ def get_colors(N, shuffle=False, bright=True):
     To get visually distinct colors, generate them in HSV space then
     convert to RGB.
     """
-    colors = [[0, 0, 0]]
-    if N == 1:
-        return colors
+    colors = []
+    if black_is_first:
+        colors.append((0, 0, 0))
+        N = N - 1
 
     brightness = 1.0 if bright else 0.7
-    hsv = [(i / (N - 1), 1, brightness) for i in range(N - 1)]
+    hsv = [(i / N, 1, brightness) for i in range(N)]
     colors.extend(list(map(lambda c: list(map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*c))), hsv)))
 
     if shuffle:
@@ -77,7 +78,7 @@ def get_colored_segmentation_mask(predictions, num_classes, images=None, binary_
     alpha: float - overlay percentage
     """
     predictions = predictions.copy()
-    colors = get_colors_cmap(num_classes)
+    colors = get_colors(num_classes)
 
     if images is None:
         shape = (predictions.shape[0], predictions.shape[1], predictions.shape[2], 3)
@@ -123,7 +124,7 @@ def get_colored_segmentation_mask_v2(predictions, num_classes, images=None, bina
     """
 
     predictions = predictions.copy()
-    colors = get_colors_cmap(num_classes - 1)
+    colors = get_colors(num_classes - 1)
 
     if images is None:
         if isinstance(predictions, list):

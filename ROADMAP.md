@@ -6,10 +6,10 @@
     - Ade20k
     - Taco
     - CVC-ClinicDB
-- [ ] New models
+- [x] New models
     - [DeeplabV3](https://arxiv.org/abs/1706.05587) - Resnet50
     - [DeeplabV3+](https://arxiv.org/abs/1802.02611) - Xception and Mobile
-- [ ] New datasets
+- [x] New datasets
     - [APDrawing](https://cg.cs.tsinghua.edu.cn/people/~Yongjin/APDrawingDB.zip)
 - [ ] Testing current experimental models
 - [ ] yaml config files for training models
@@ -25,7 +25,7 @@
 - [ ] learnng rate schedulers
     - CyclicLR
 - [ ] Stochastic Weight Averaging
-
+- [ ] multiple outputs for masks that can overlay
 ## v0.6.0
 
 - [ ] configure models in more detail

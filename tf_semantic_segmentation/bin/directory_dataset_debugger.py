@@ -8,6 +8,7 @@ from ..visualizations import show
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--directory', required=True)
+    parser.add_argument('-rm', '--resize_method', default='resize')
     parser.add_argument('-s', '--size', default=(256, 256), type=lambda x: list(map(int, x.split(","))))
     args = parser.parse_args()
 
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     ds.summary()
 
     tfds = ds.tfdataset(DataType.TRAIN, randomize=True)
-    fn = get_preprocess_fn_v2(args.size, ds.num_classes, 'resize', True)
+    fn = get_preprocess_fn_v2(args.size, ds.num_classes, args.resize_method, True)
     tfds = tfds.map(fn)
 
     for i, (image, mask) in enumerate(tfds):
@@ -24,5 +25,3 @@ if __name__ == "__main__":
         image = (image.numpy() * 255).astype(np.uint8)
         show.show_images([image, mask])
         print(image.shape, mask.shape)
-        if i == 10:
-            break

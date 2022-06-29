@@ -84,3 +84,15 @@ def smooth_l1(sigma=3.0):
 
         return tf.reduce_mean(regression_loss)
     return smooth_l1
+
+
+def focal_loss(**args):
+    # automatically handles binary and multiclass
+    def focal(y_true, y_pred):
+        num_classes = y_true.shape[-1]
+        if num_classes == 1:
+            return binary_focal_loss(**args)(y_true, y_pred)
+        else:
+            return categorical_focal_loss(**args)(y_true, y_pred)
+
+    return focal

@@ -1,5 +1,7 @@
-from .ssim import ssim_loss
+from tf_semantic_segmentation.losses.utils import onehot2image
+from .ssim import ssim_ms_loss, ssim_loss
 from .ce import categorical_crossentropy_loss, binary_crossentropy_loss
+from .focal import focal_loss
 from .dice import dice_loss
 import tensorflow as tf
 
@@ -71,3 +73,16 @@ def dice_ssim_categorical_crossentropy_loss(loss_weight_dice=1.0, loss_weight_ce
         return dice * loss_weight_dice + ce * loss_weight_ce + loss_weight_ssim * ssim
 
     return dice_ssim_categorical_crossentropy
+
+
+def unet3plus_loss():
+
+    def unet3plus_loss_function(y_true, y_pred):
+        # bce = binary_crossentropy_loss()(y_true, y_pred)
+        dice = dice_loss()(y_true, y_pred)
+        ssim = ssim_ms_loss()(y_true, y_pred)
+        focal = focal_loss()(y_true, y_pred)
+
+        return (dice + focal + ssim) / 3.0
+
+    return unet3plus_loss_function

@@ -495,15 +495,24 @@ class NotificationCallback(tf.keras.callbacks.Callback):
 
 class MLFlowCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, every: int = 1000, monitor_metric: str = "val_iou_score"):
+    def __init__(self, every: int = 1000, monitor_metric: str = "val_iou_score", mode: str = 'max'):
         super(MLFlowCallback, self).__init__()
-        logger.info("Initialize MLFlow callback")
         self.every = every
         self.global_step = 0
         self.epoch = 0
         self.monitor_metric = monitor_metric
-        self.history = []
         self.max_metric = 0
+
+        if mode == 'min':
+            self.monitor_op = np.less
+            self.best = np.Inf
+        elif mode == 'max':
+            self.monitor_op = np.greater
+            self.best = -np.Inf
+        else:
+            raise Exception(f"invalid mode {mode}")
+
+        logger.info(f"Initialized mlflow callback [metric={monitor_metric} | mode={mode} | monitor_op={self.monitor_op}]")
 
     def on_batch_end(self, step, logs=None):
 
@@ -521,26 +530,31 @@ class MLFlowCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None):
 
-        self.history.append(logs)
-        current_max_metric = max([x[self.monitor_metric] for x in self.history])
-
+        # try logging normal metrics
         try:
             import mlflow
             metrics = {f"epoch-{k}": v for k, v in logs.items()}
             mlflow.log_metrics(metrics, epoch)
+        except Exception as e:
+            logger.error("could not send metrics to mlflow: %s" % str(e))
 
-            if current_max_metric > self.max_metric:
-                self.max_metric = current_max_metric
+        current = logs[self.monitor_metric]
+
+        if self.monitor_op(current, self.best):
+            self.best = current
+
+            output_dir = os.path.join(self.logdir, 'models', f"{self.monitor_metric}-{round(self.best, 6)}")
+            try:
                 logger.info("logging model")
 
                 try:
-                    mlflow.keras.log_model(self.model, 'model_' + self.monitor_metric + '_' + str(current_max_metric))
+                    mlflow.keras.log_model(self.model, f'model_{self.monitor_metric}_{round(self.best, 6)}')
                 except:
                     logger.info("couldn't log mlflow model")
                     pass
 
-        except Exception as e:
-            logger.error("could not send metrics to mlflow: %s" % str(e))
+            except Exception as e:
+                logger.error("could not send model to mlflow: %s" % str(e))
 
 
 class WBCallback(tf.keras.callbacks.Callback):

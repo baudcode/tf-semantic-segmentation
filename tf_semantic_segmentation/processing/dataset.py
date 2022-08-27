@@ -338,8 +338,8 @@ def random_rot(**args):
 
     cond = tf.random.uniform(shape=[], minval=0.0, maxval=1.0, dtype=tf.float32) >= THRESHOLD
 
-    angle = tf.random.uniform(shape=[], min_val=0, maxval=1.0, dtype=tf.float32)
-    angle = tf.cast(angle * 360, tf.int32)
+    angle = tf.random.uniform(shape=[], minval=0, maxval=1.0, dtype=tf.float32) * 360.
+    # angle = tf.cast(angle * 360, dtype=tf.int64)
 
     for k, x in args.items():
         args[k] = tf.cond(cond, lambda: tfa.image.rotate(x, angle), lambda: x)
